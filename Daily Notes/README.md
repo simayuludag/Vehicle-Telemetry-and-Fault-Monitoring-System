@@ -138,3 +138,54 @@ Bu aşamada araç içi gömülü yazılım ve ağ mimarisinin temelleri çalış
 * `docs/signals.md`: Sinyal detayları, formüller, bit seviyesi gösterimler ve timeout kuralları.
 * Sistem Mimarisi & Veri Akış Şeması.
 * Test edilebilir yazılım gereksinimleri (SRS - REQ-SIG-001 ... REQ-SIG-004).
+## Day 4 — Araç State Machine & Deterministik Sürüş Simülasyonu
+
+### 🎯 Amaç ve Kazanımlar
+Rastgele veri üretimi yerine matematiksel ve kural tabanlı deterministik araç davranışları oluşturmak.
+- **State Machine (FSM):** Sonlu durum makineleri ve durum yaşam döngüsü.
+- **Guard Conditions & Actions:** Güvenli geçiş koşulları, `Entry` ve `Exit` eylemleri.
+- **Deterministik Simülasyon:** Periyodik çalışma (10 Hz / $100\text{ ms}$) ve tekrarlanabilir fizik döngüsü.
+- **Senaryo Tabanlı Girdi:** YAML formatında zaman damgalı sürüş senaryoları.
+
+---
+
+### 🔄 Araç Durum Şeması (State Lifecycle)
+
+| Durum (State) | Açıklama | Tetikleyici / Guard Şartı | Hedef Durum |
+|---|---|---|---|
+| **OFF** | Araç kapalı | Kontak açıldı (`ignition == True`) | `IGNITION_ON` |
+| **IGNITION_ON** | Elektrik aktif, motor kapalı | Marş basıldı & Fren $\ge 20\%$ | `ENGINE_RUNNING` |
+| **ENGINE_RUNNING** | Motor rölantide ($800\text{ RPM}$) | Vites `D` & Gaz $> 5\%$ | `DRIVING` |
+| **DRIVING** | Araç seyir halinde | Hız $\le 0.1\text{ km/h}$ & Gaz $= 0\%$ | `ENGINE_RUNNING` |
+| **FAULT** | Kritik hata algılandı | Arıza temizlendi & Hız $= 0$ | `RECOVERY` |
+| **RECOVERY** | Kendi kendini test etme modu | Test tamamlandı | `ENGINE_RUNNING` |
+| **SHUTDOWN** | Kapatma sekansı | Kontak kapatıldı (`ignition == False`) | `OFF` |
+
+---
+
+### 📁 Dosya Yapısı ve Görevleri
+* `day-4-app/vehicle_fsm.py`: Durum makinesi mantığı ve deterministik fizik modeli ($a = F_{\text{gaz}} - F_{\text{fren}} - F_{\text{sürtünme}}$).
+* `day-4-app/normal_drive.yaml`: Kontak açma, marş, hızlanma, sabit hız, frenleme ve stop aşamalarını içeren sürüş senaryosu.
+* `day-4-app/run_simulation.py`: YAML senaryosunu $100\text{ ms}$ periyotlarla işleten simülatör.
+* `day-4-app/test_vehicle_fsm.py`: Durum geçişleri ve kabul kriterleri testleri (`pytest`).
+
+---
+
+### 🧪 Kabul Kriterleri Doğrulaması
+- [x] Kontak kapalıyken devir ($0\text{ RPM}$) ve hız ($0\text{ km/h}$) sıfırlanmalıdır.
+- [x] Gaz artışı devir ve hız üzerinde tutarlı ivmelenme sağlamalıdır.
+- [x] Aynı senaryo her çalıştırmada birebir aynı çıktıyı üretmelidir (Determinizm).
+
+---
+
+### 📚 Araştırma Notları
+
+#### 1. JSON vs. YAML
+* **JSON:** Web servisleri ve hızlı veri aktarımı için optimize edilmiş, süslü parantez `{}` kullanan format.
+* **YAML:** İnsan okunabilirliği yüksek, girintilere (boşluk) dayalı, simülasyon ve konfigürasyon senaryoları için ideal format.
+
+#### 2. CAN Bus Hızı ve Hat Uzunluğu İlişkisi
+CAN mimarisinde propagasyon gecikmesi (sinyalin hat boyunca gidiş-dönüş süresi) nedeniyle **hat uzunluğu ile haberleşme hızı ters orantılıdır**:
+* **1 Mbps:** Maksimum $\sim 30 - 40\text{ metre}$ *(Motor, ABS/ESP gibi kritik sistemler)*
+* **500 kbps:** Maksimum $\sim 100\text{ metre}$ *(Araç içi standart iletişim)*
+* **125 kbps:** Maksimum $\sim 500\text{ metre}$ *(Konfor modülleri ve uzun hatlar)*
