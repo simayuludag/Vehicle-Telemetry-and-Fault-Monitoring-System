@@ -96,6 +96,7 @@ python -m pytest -v
 
 # Çıktı:
 # ======================== 17 passed in 0.07s =========================
+```
 ## Day 3: Araç & ECU Mimarisi ve Sinyal Spesifikasyonu
 
 Bu aşamada araç içi gömülü yazılım ve ağ mimarisinin temelleri çalışılmış, sistem mimarisi modellenmiş ve 8 temel CAN sinyali için test edilebilir spesifikasyonlar oluşturulmuştur.
