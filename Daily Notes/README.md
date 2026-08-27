@@ -189,37 +189,37 @@ CAN mimarisinde propagasyon gecikmesi (sinyalin hat boyunca gidiş-dönüş sür
 * **1 Mbps:** Maksimum $\sim 30 - 40\text{ metre}$ *(Motor, ABS/ESP gibi kritik sistemler)*
 * **500 kbps:** Maksimum $\sim 100\text{ metre}$ *(Araç içi standart iletişim)*
 * **125 kbps:** Maksimum $\sim 500\text{ metre}$ *(Konfor modülleri ve uzun hatlar)*
-# Day 5: Virtual ECUs and Periodic CAN Message Transmission
+# 5. Gün: Sanal ECU'lar ve Periyodik CAN Mesaj Üretimi
 
-## 1. Overview
-The primary objective of Day 5 is to decouple vehicle dynamics and telemetry into dedicated **Virtual Electronic Control Units (ECUs)** adhering to the **Single Responsibility Principle (SRP)**. This module establishes asynchronous periodic task scheduling, message packaging, alive counter validation, and timing/jitter verification across a simulated CAN network.
-
----
-
-## 2. Key Theoretical Concepts
-
-* **Modular ECU Architecture:** Distributing software functions into isolated domain controllers (Powertrain, Body, Diagnostic) to prevent tight coupling and single points of failure.
-* **Single Responsibility Principle (SRP):** Each ECU handles exclusively its domain-specific sensors, actuators, and signal generation.
-* **Message Cycle & Task Periods:** Real-time embedded scheduling prioritizing safety-critical telemetry with higher transmission frequencies over routine status data.
-* **Alive Counter & Integrity:** 4-bit monotonic rolling counters (`0–15`) paired with high-resolution timestamps to detect packet loss, staleness, and message sequence integrity.
-* **CAN ID Standard vs. Extended:**
-  * **11-bit Standard ID (`0x000`–`0x7FF`):** Low-latency deterministic arbitration for operational vehicle bus communication.
-  * **29-bit Extended ID (`0x00000000`–`0x1FFFFFFF`):** Higher addressing capacity for diagnostics (UDS / ISO 14229) and network management.
+## 1. Genel Bakış
+5. günün temel amacı, araç dinamiği ve telemetri fonksiyonlarını **Tek Sorumluluk İlkesi (Single Responsibility Principle - SRP)** doğrultusunda bağımsız **Sanal Elektronik Kontrol Ünitelerine (ECU)** ayırmaktır. Bu modülde asenkron periyodik görev zamanlama, mesaj paketleme, canlılık sayacı (alive counter) doğrulaması ve simüle edilmiş CAN ağı üzerinde zamanlama/jitter testleri gerçekleştirilmiştir.
 
 ---
 
-## 3. Communication Matrix & Signal Specification
+## 2. Temel Kavramlar
 
-| ECU Node | Message Name | CAN ID (Hex) | Frame Type | Cycle Time | Signals & Payloads |
+* **Modüler ECU Mimarisi:** Yazılım fonksiyonlarının bağımsız etki alanı kontrolcülerine (Powertrain, Body, Diagnostic) dağıtılarak sistemin modüler hale getirilmesi ve tek nokta hatalarının önlenmesi.
+* **Tek Sorumluluk İlkesi (SRP):** Her ECU'nun yalnızca kendi alanına ait sensör, aktüatör ve sinyal üretiminden sorumlu olması.
+* **Mesaj Çevrimi ve Görev Periyotları (Task Period & Cycle Time):** Gerçek zamanlı gömülü sistemlerde sürüş açısından kritik telemetrilerin (100 ms) rutin durum verilerine (500–1000 ms) göre daha yüksek frekansla hatta iletilmesi.
+* **Canlılık Sayacı (Alive Counter) ve Bütünlük:** Veri kaybını, mesajın donmasını (stale data) ve sıra doğruluğunu denetlemek için 4-bit artan sayaç (`0–15`) ve yüksek çözünürlüklü zaman damgası kullanımı.
+* **Standart ve Extended CAN ID:**
+  * **11-bit Standart ID (`0x000`–`0x7FF`):** Araç içi operasyonel ve hızlı veri iletimi için standart öncelikli adresleme.
+  * **29-bit Extended ID (`0x00000000`–`0x1FFFFFFF`):** Teşhis protokolleri (UDS / ISO 14229) ve geniş ağ yönetimi için yüksek kapasiteli adresleme.
+
+---
+
+## 3. İletişim Matrisi ve Sinyal Tanımları
+
+| ECU Modülü | Mesaj Adı | CAN ID (Hex / Dec) | ID Tipi | Periyot | İçerdiği Sinyaller |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Powertrain ECU** | `PowertrainStatus` | `0x101` (257) | Standard (11-bit) | 100 ms | `EngineRPM`, `EngineTemp`, `GearPosition`, `AliveCounter` |
-| **Powertrain ECU** | `PedalStatus` | `0x102` (258) | Standard (11-bit) | 100 ms | `ThrottlePosition`, `BrakeApplied`, `AliveCounter` |
-| **Body ECU** | `BodyStatus` | `0x201` (513) | Standard (11-bit) | 500 ms | `DoorLockState`, `HeadlightStatus`, `Age`, `AliveCounter` |
+| **Powertrain ECU** | `PowertrainStatus` | `0x101` (257) | Standart (11-bit) | 100 ms | `EngineRPM`, `EngineTemp`, `GearPosition`, `AliveCounter` |
+| **Powertrain ECU** | `PedalStatus` | `0x102` (258) | Standart (11-bit) | 100 ms | `ThrottlePosition`, `BrakeApplied`, `AliveCounter` |
+| **Body ECU** | `BodyStatus` | `0x201` (513) | Standart (11-bit) | 500 ms | `DoorLockState`, `HeadlightStatus`, `Age`, `AliveCounter` |
 | **Diagnostic ECU**| `DiagnosticStatus` | `0x18DAF110` | Extended (29-bit) | 1000 ms | `ActiveDTCCount`, `ECUOperatingMode`, `SystemHealth` |
 
 ---
 
-## 4. DBC Specification (Sample Extract)
+## 4. DBC Tanımı (Örnek Kesit)
 
 ```text
 VERSION ""
