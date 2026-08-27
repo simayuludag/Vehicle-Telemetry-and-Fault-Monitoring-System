@@ -189,3 +189,59 @@ CAN mimarisinde propagasyon gecikmesi (sinyalin hat boyunca gidiş-dönüş sür
 * **1 Mbps:** Maksimum $\sim 30 - 40\text{ metre}$ *(Motor, ABS/ESP gibi kritik sistemler)*
 * **500 kbps:** Maksimum $\sim 100\text{ metre}$ *(Araç içi standart iletişim)*
 * **125 kbps:** Maksimum $\sim 500\text{ metre}$ *(Konfor modülleri ve uzun hatlar)*
+# Day 5: Virtual ECUs and Periodic CAN Message Transmission
+
+## 1. Overview
+The primary objective of Day 5 is to decouple vehicle dynamics and telemetry into dedicated **Virtual Electronic Control Units (ECUs)** adhering to the **Single Responsibility Principle (SRP)**. This module establishes asynchronous periodic task scheduling, message packaging, alive counter validation, and timing/jitter verification across a simulated CAN network.
+
+---
+
+## 2. Key Theoretical Concepts
+
+* **Modular ECU Architecture:** Distributing software functions into isolated domain controllers (Powertrain, Body, Diagnostic) to prevent tight coupling and single points of failure.
+* **Single Responsibility Principle (SRP):** Each ECU handles exclusively its domain-specific sensors, actuators, and signal generation.
+* **Message Cycle & Task Periods:** Real-time embedded scheduling prioritizing safety-critical telemetry with higher transmission frequencies over routine status data.
+* **Alive Counter & Integrity:** 4-bit monotonic rolling counters (`0–15`) paired with high-resolution timestamps to detect packet loss, staleness, and message sequence integrity.
+* **CAN ID Standard vs. Extended:**
+  * **11-bit Standard ID (`0x000`–`0x7FF`):** Low-latency deterministic arbitration for operational vehicle bus communication.
+  * **29-bit Extended ID (`0x00000000`–`0x1FFFFFFF`):** Higher addressing capacity for diagnostics (UDS / ISO 14229) and network management.
+
+---
+
+## 3. Communication Matrix & Signal Specification
+
+| ECU Node | Message Name | CAN ID (Hex) | Frame Type | Cycle Time | Signals & Payloads |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Powertrain ECU** | `PowertrainStatus` | `0x101` (257) | Standard (11-bit) | 100 ms | `EngineRPM`, `EngineTemp`, `GearPosition`, `AliveCounter` |
+| **Powertrain ECU** | `PedalStatus` | `0x102` (258) | Standard (11-bit) | 100 ms | `ThrottlePosition`, `BrakeApplied`, `AliveCounter` |
+| **Body ECU** | `BodyStatus` | `0x201` (513) | Standard (11-bit) | 500 ms | `DoorLockState`, `HeadlightStatus`, `Age`, `AliveCounter` |
+| **Diagnostic ECU**| `DiagnosticStatus` | `0x18DAF110` | Extended (29-bit) | 1000 ms | `ActiveDTCCount`, `ECUOperatingMode`, `SystemHealth` |
+
+---
+
+## 4. DBC Specification (Sample Extract)
+
+```text
+VERSION ""
+
+NS_ :
+
+BS_:
+
+BU_: Powertrain_ECU Body_ECU Diagnostic_ECU
+
+BO_ 257 PowertrainStatus: 8 Powertrain_ECU
+ SG_ EngineRPM : 0|16@1+ (1,0) [0|8000] "rpm" Vector__XXX
+ SG_ EngineTemp : 16|8@1+ (1,-40) [-40|215] "degC" Vector__XXX
+ SG_ GearPosition : 24|4@1+ (1,0) [0|6] "gear" Vector__XXX
+ SG_ AliveCounter : 28|4@1+ (1,0) [0|15] "cnt" Vector__XXX
+
+BO_ 513 BodyStatus: 8 Body_ECU
+ SG_ DoorLockState : 0|2@1+ (1,0) [0|3] "raw" Vector__XXX
+ SG_ HeadlightStatus : 2|2@1+ (1,0) [0|3] "raw" Vector__XXX
+ SG_ Age : 8|8@1+ (1,0) [0|120] "years" Vector__XXX
+ SG_ AliveCounter : 16|4@1+ (1,0) [0|15] "cnt" Vector__XXX
+
+BO_ 2497376528 DiagnosticStatus: 8 Diagnostic_ECU
+ SG_ ActiveDTCCount : 0|8@1+ (1,0) [0|255] "cnt" Vector__XXX
+ SG_ ECUOperatingMode : 8|8@1+ (1,0) [0|3] "mode" Vector__XXX
