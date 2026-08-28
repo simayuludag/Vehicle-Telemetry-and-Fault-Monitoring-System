@@ -245,3 +245,65 @@ BO_ 513 BodyStatus: 8 Body_ECU
 BO_ 2497376528 DiagnosticStatus: 8 Diagnostic_ECU
  SG_ ActiveDTCCount : 0|8@1+ (1,0) [0|255] "cnt" Vector__XXX
  SG_ ECUOperatingMode : 8|8@1+ (1,0) [0|3] "mode" Vector__XXX
+ # 6. Gün — CAN ve DBC Temelleri
+
+## 🎯 Amaç
+Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajların veri tabanı (DBC) tanımını oluşturmak ve bayt/bit düzeyinde sinyal paketleme kurallarını belgelemektir.
+
+---
+
+## 🧠 Öğrenilen Kavramlar
+
+* **CAN Frame, CAN ID ve DLC:** CAN veri yolu üzerinde iletilen standart paket yapısı incelenmiştir. Mesaj önceliğini ve içeriğini belirten **CAN ID** kavramı ile veri yükü boyutunu (0-8 byte) tanımlayan **DLC (Data Length Code)** kuralları öğrenilmiştir.
+* **Signal Start Bit ve Length:** Bir CAN veri paketinin (payload) içindeki alt sinyallerin başlangıç konumu (`start bit`) ve kapladığı alan (`length`) yapılandırılmıştır.
+* **Scaling ve Offset:** CAN hattında taşınan tam sayı (raw/integer) verilerin, negatif ve ondalıklı gerçek fiziksel büyüklüklere dönüştürülmesi için formülasyon (`Fiziksel = Raw * Scale + Offset`) uygulanmıştır.
+* **Intel / Motorola Endianness:** Düşük baytın düşük adrese yazıldığı **Intel (Little-Endian)** ve yüksek baytın başa yazıldığı **Motorola (Big-Endian)** mimarileri karşılaştırılmıştır.
+* **Standard vs. Extended ID:** 11-bit standart CAN formatı (`0x000` - `0x7FF`) ile 29-bit genişletilmiş CAN formatı (`0x00000000` - `0x1FFFFFFF`) arasındaki farklar ele alınmıştır.
+* **DBC Dosyasının Rolü:** Ham CAN trafiğini insan tarafından okunabilir mühendislik birimlerine dönüştüren standart veri tabanı yapısı incelenmiştir.
+
+---
+
+## 📋 Sinyal Haritası (Signal Mapping Matrix)
+
+| CAN ID (Hex / Dec) | Mesaj Adı | DLC | Sinyal Adı | Start Bit | Length (Bit) | Byte Order | Tip | Scale | Offset | Min | Max | Birim |
+| :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **0x100** (256) | `PowertrainStatus` | 8 | Speed | 0 | 16 | Intel (LE) | Unsigned | 0.01 | 0 | 0 | 250 | km/h |
+| | | | RPM | 16 | 16 | Intel (LE) | Unsigned | 0.25 | 0 | 0 | 8000 | rpm |
+| | | | CoolantTemp | 32 | 8 | Intel (LE) | Unsigned | 1.0 | -40 | -40 | 150 | °C |
+| | | | AliveCounter | 40 | 4 | Intel (LE) | Unsigned | 1.0 | 0 | 0 | 15 | - |
+| **0x101** (257) | `PedalStatus` | 8 | Throttle | 0 | 8 | Intel (LE) | Unsigned | 0.4 | 0 | 0 | 100 | % |
+| | | | Brake | 8 | 8 | Intel (LE) | Unsigned | 0.4 | 0 | 0 | 100 | % |
+| **0x200** (512) | `BodyStatus` | 8 | Ignition | 0 | 2 | Intel (LE) | Unsigned | 1.0 | 0 | 0 | 3 | enum |
+| | | | Door | 2 | 4 | Intel (LE) | Unsigned | 1.0 | 0 | 0 | 15 | bitfield |
+| | | | FuelLevel | 8 | 8 | Intel (LE) | Unsigned | 0.5 | 0 | 0 | 100 | % |
+| **0x300** (768) | `DiagnosticStatus` | 8 | FaultStatus | 0 | 8 | Intel (LE) | Unsigned | 1.0 | 0 | 0 | 255 | enum |
+| | | | FaultCounter | 8 | 8 | Intel (LE) | Unsigned | 1.0 | 0 | 0 | 255 | count |
+
+---
+
+## 🔢 Scaling & Offset Hesaplama Örnekleri
+
+**Dönüşüm Formülleri:**
+* `Fiziksel Değer = (Raw Değer * Scale) + Offset`
+* `Raw Değer = (Fiziksel Değer - Offset) / Scale`
+
+### Örnek 1: Motor Sıcaklığı (`CoolantTemp`)
+* `Scale = 1.0`, `Offset = -40`
+* **Fizikselden Hama:** $90^\circ\text{C} \rightarrow \text{Raw} = \frac{90 - (-40)}{1.0} = 130$ (`0x82`)
+* **Hamdan Fiziksele:** `0x28` ($40$) $\rightarrow \text{Fiziksel} = (40 \times 1.0) + (-40) = 0^\circ\text{C}$
+
+### Örnek 2: Araç Hızı (`Speed`)
+* `Scale = 0.01`, `Offset = 0`, 16-bit Little Endian
+* **Fizikselden Hama:** $105.45\text{ km/h} \rightarrow \text{Raw} = \frac{105.45}{0.01} = 10545$ (`0x2931`)
+* **Bayt Dağılımı:** `Byte 0 = 0x31`, `Byte 1 = 0x29`
+
+### Örnek 3: Gaz Pedalı Açıklığı (`Throttle`)
+* `Scale = 0.4`, `Offset = 0`
+* **Hamdan Fiziksele:** `0xC8` ($200$) $\rightarrow \text{Fiziksel} = 200 \times 0.4 = \%80$
+
+---
+
+## 📦 Günün Teslimatları
+* `dbc/internship_vehicle.dbc`: Ağ tanımlarını ve sinyal kurallarını içeren DBC veri tabanı dosyası.
+* `docs/signals.md`: Detaylı CAN sinyal haritası ve bit yerleşim tablosu.
+* PCAN sürücüleri ve **PCAN-View** analiz yazılımı kurulumu.
