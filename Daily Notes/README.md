@@ -245,14 +245,16 @@ BO_ 513 BodyStatus: 8 Body_ECU
 BO_ 2497376528 DiagnosticStatus: 8 Diagnostic_ECU
  SG_ ActiveDTCCount : 0|8@1+ (1,0) [0|255] "cnt" Vector__XXX
  SG_ ECUOperatingMode : 8|8@1+ (1,0) [0|3] "mode" Vector__XXX
-# 6. Gün — CAN ve DBC Temelleri
+# Daily Notes — Vehicle Telemetry and Fault Monitoring System
 
-## 🎯 Amaç
+## 6. Gün — CAN ve DBC Temelleri
+
+### 🎯 Amaç
 Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajların veri tabanı (DBC) tanımını oluşturmak ve bayt/bit düzeyinde sinyal paketleme kurallarını belgelemektir.
 
 ---
 
-## 🧠 Öğrenilen Kavramlar
+### 🧠 Öğrenilen Kavramlar
 
 * **CAN Frame, CAN ID ve DLC:** CAN veri yolu üzerinde iletilen standart paket yapısı incelenmiştir. Mesaj önceliğini ve içeriğini belirten **CAN ID** kavramı ile veri yükü boyutunu (0-8 byte) tanımlayan **DLC (Data Length Code)** kuralları öğrenilmiştir.
 * **Signal Start Bit ve Length:** Bir CAN veri paketinin (payload) içindeki alt sinyallerin başlangıç konumu (`start bit`) ve kapladığı alan (`length`) yapılandırılmıştır.
@@ -263,7 +265,7 @@ Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajl
 
 ---
 
-## 📋 Sinyal Haritası (Signal Mapping Matrix)
+### 📋 Sinyal Haritası (Signal Mapping Matrix)
 
 | CAN ID (Hex / Dec) | Mesaj Adı | DLC | Sinyal Adı | Start Bit | Length (Bit) | Byte Order | Tip | Scale | Offset | Min | Max | Birim |
 | :--- | :--- | :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -281,29 +283,19 @@ Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajl
 
 ---
 
-## 🔢 Scaling & Offset Hesaplama Örnekleri
+### 🔢 Scaling & Offset Hesaplama Örnekleri
 
 **Dönüşüm Formülleri:**
 * `Fiziksel Değer = (Raw Değer * Scale) + Offset`
 * `Raw Değer = (Fiziksel Değer - Offset) / Scale`
 
-### Örnek 1: Motor Sıcaklığı (`CoolantTemp`)
-* `Scale = 1.0`, `Offset = -40`
-* **Fizikselden Hama:** $90^\circ\text{C} \rightarrow \text{Raw} = \frac{90 - (-40)}{1.0} = 130$ (`0x82`)
-* **Hamdan Fiziksele:** `0x28` ($40$) $\rightarrow \text{Fiziksel} = (40 \times 1.0) + (-40) = 0^\circ\text{C}$
-
-### Örnek 2: Araç Hızı (`Speed`)
-* `Scale = 0.01`, `Offset = 0`, 16-bit Little Endian
-* **Fizikselden Hama:** $105.45\text{ km/h} \rightarrow \text{Raw} = \frac{105.45}{0.01} = 10545$ (`0x2931`)
-* **Bayt Dağılımı:** `Byte 0 = 0x31`, `Byte 1 = 0x29`
-
-### Örnek 3: Gaz Pedalı Açıklığı (`Throttle`)
-* `Scale = 0.4`, `Offset = 0`
-* **Hamdan Fiziksele:** `0xC8` ($200$) $\rightarrow \text{Fiziksel} = 200 \times 0.4 = \%80$
+* **Örnek 1 (CoolantTemp):** $90^\circ\text{C} \rightarrow \text{Raw} = \frac{90 - (-40)}{1.0} = 130$ (`0x82`)
+* **Örnek 2 (Speed):** $105.45\text{ km/h} \rightarrow \text{Raw} = \frac{105.45}{0.01} = 10545$ (`0x2931`)
+* **Örnek 3 (Throttle):** Okunan `0xC8` ($200$) $\rightarrow \text{Fiziksel} = 200 \times 0.4 = \%80$
 
 ---
 
-## 📄 DBC Dosyası (`dbc/internship_vehicle.dbc`)
+### 📄 DBC Tanımı (`dbc/internship_vehicle.dbc`)
 
 ```dbc
 VERSION ""
