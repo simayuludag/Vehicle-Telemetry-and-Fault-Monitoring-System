@@ -245,7 +245,7 @@ BO_ 513 BodyStatus: 8 Body_ECU
 BO_ 2497376528 DiagnosticStatus: 8 Diagnostic_ECU
  SG_ ActiveDTCCount : 0|8@1+ (1,0) [0|255] "cnt" Vector__XXX
  SG_ ECUOperatingMode : 8|8@1+ (1,0) [0|3] "mode" Vector__XXX
- # 6. Gün — CAN ve DBC Temelleri
+# 6. Gün — CAN ve DBC Temelleri
 
 ## 🎯 Amaç
 Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajların veri tabanı (DBC) tanımını oluşturmak ve bayt/bit düzeyinde sinyal paketleme kurallarını belgelemektir.
@@ -303,7 +303,68 @@ Fiziksel araç sinyallerini standart CAN mesajlarına dönüştürmek, bu mesajl
 
 ---
 
-## 📦 Günün Teslimatları
-* `dbc/internship_vehicle.dbc`: Ağ tanımlarını ve sinyal kurallarını içeren DBC veri tabanı dosyası.
-* `docs/signals.md`: Detaylı CAN sinyal haritası ve bit yerleşim tablosu.
-* PCAN sürücüleri ve **PCAN-View** analiz yazılımı kurulumu.
+## 📄 DBC Dosyası (`dbc/internship_vehicle.dbc`)
+
+```dbc
+VERSION ""
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: VCU ECU BCM DIAG
+
+BO_ 256 PowertrainStatus: 8 VCU
+ SG_ Speed : 0|16@1+ (0.01,0) [0|250] "km/h" ECU
+ SG_ RPM : 16|16@1+ (0.25,0) [0|8000] "rpm" ECU
+ SG_ CoolantTemp : 32|8@1+ (1,-40) [-40|150] "degC" ECU
+ SG_ AliveCounter : 40|4@1+ (1,0) [0|15] "" ECU
+
+BO_ 257 PedalStatus: 8 VCU
+ SG_ Throttle : 0|8@1+ (0.4,0) [0|100] "%" ECU
+ SG_ Brake : 8|8@1+ (0.4,0) [0|100] "%" ECU
+
+BO_ 512 BodyStatus: 8 BCM
+ SG_ Ignition : 0|2@1+ (1,0) [0|3] "" VCU
+ SG_ Door : 2|4@1+ (1,0) [0|15] "" VCU
+ SG_ FuelLevel : 8|8@1+ (0.5,0) [0|100] "%" VCU
+
+BO_ 768 DiagnosticStatus: 8 DIAG
+ SG_ FaultStatus : 0|8@1+ (1,0) [0|255] "" VCU
+ SG_ FaultCounter : 8|8@1+ (1,0) [0|255] "" VCU
+
+CM_ BO_ 256 "Powertrain temel durum mesaji (0x100)";
+CM_ BO_ 257 "Gaz ve fren pedal verileri (0x101)";
+CM_ BO_ 512 "Gövde ve kontak bilgileri (0x200)";
+CM_ BO_ 768 "Arıza ve teşhis durum mesaji (0x300)";
+
+VAL_ 512 Ignition 0 "OFF" 1 "ACC" 2 "ON" 3 "START" ;
+```
