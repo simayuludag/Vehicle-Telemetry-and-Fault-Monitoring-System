@@ -246,7 +246,7 @@ BO_ 2497376528 DiagnosticStatus: 8 Diagnostic_ECU
  SG_ ActiveDTCCount : 0|8@1+ (1,0) [0|255] "cnt" Vector__XXX
  SG_ ECUOperatingMode : 8|8@1+ (1,0) [0|3] "mode" Vector__XXX
 # Daily Notes — Vehicle Telemetry and Fault Monitoring System
-
+```
 ## 6. Gün — CAN ve DBC Temelleri
 
 ### 🎯 Amaç
