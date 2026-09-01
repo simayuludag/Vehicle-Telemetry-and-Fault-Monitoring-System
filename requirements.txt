@@ -1,0 +1,4 @@
+python-can>=4.3.0
+rich>=13.7.0
+pytest>=8.0.0
+flake8>=7.0.0
