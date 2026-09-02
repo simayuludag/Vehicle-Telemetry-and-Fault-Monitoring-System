@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J1939 CAN Bus Telemetry & Fleet Speed Monitor</title>
+  <meta name="description" content="SAE J1939 Standardında 30 Ticari Araç İçin Canlı Hız Sinyali Simülatörü ve Web İzleme Platformu (PGN 65265, SPN 84).">
+  
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚛</text></svg>">
+</head>
+<body>
+
+  <!-- TOPBAR / STATUS HEADER -->
+  <header class="topbar">
+    <div class="brand-section">
+      <div class="logo-badge">J19</div>
+      <div class="brand-title">
+        <h1>
+          J1939 Fleet Telemetry 
+          <span class="j1939-pill">SAE J1939 · PGN 65265 · SPN 84</span>
+        </h1>
+        <p>10 Marka · 30 Model Canlı Hız ve 29-Bit CAN Sinyal İzleyici</p>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Status Pills -->
+    <div class="telemetry-metrics-bar">
+      <div class="metric-pill">
+        <span class="dot" id="wsStatusDot"></span>
+        <span class="label">BUS:</span>
+        <span class="val" id="wsStatusText">BAĞLANIYOR...</span>
+      </div>
+      <div class="metric-pill">
+        <span class="label">MESAJ SAYACI:</span>
+        <span class="val" id="totalFramesCounter">0</span>
+      </div>
+      <div class="metric-pill">
+        <span class="label">SENARYO:</span>
+        <span class="val" id="scenarioBadge" style="color:var(--accent-cyan)">NORMAL</span>
+      </div>
+    </div>
+
+    <!-- Header Quick Actions -->
+    <div class="header-actions">
+      <button class="btn-emergency-stop" id="btnEmergencyStop" title="Tüm Filoyu Durdur">
+        🛑 ACİL DURDUR (ALL STOP)
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-container">
+
+    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID & SCENARIOS -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-title">
+          <h2>🚛 Araç Filosu (Fleet Overview)</h2>
+          <span class="badge-counter">30 Model / 10 Marka</span>
+        </div>
+
+        <!-- Master Speed Slider for All Vehicles -->
+        <div class="master-speed-control">
+          <label for="masterSpeedSlider">Filo Hızı:</label>
+          <input type="range" id="masterSpeedSlider" min="0" max="130" value="80">
+          <span id="masterSpeedVal" style="font-family:var(--font-mono); font-size:0.8rem; font-weight:700; color:var(--accent-cyan)">80 KM/H</span>
+        </div>
+      </div>
+
+      <!-- Brand Filter Tabs -->
+      <div class="brand-filters-wrap" id="brandFilters">
+        <!-- Dynamically populated with 10 brands -->
+      </div>
+
+      <!-- Fleet Scenario Controls Bar -->
+      <div class="fleet-scenarios-bar">
+        <div class="scenario-btns">
+          <span style="font-size:0.75rem; color:var(--text-muted); align-self:center; margin-right:4px;">Senaryolar:</span>
+          <button class="btn-scenario active" data-scenario="normal">🚦 Normal</button>
+          <button class="btn-scenario" data-scenario="highway">🛣️ Otoyol (90 km/h)</button>
+          <button class="btn-scenario" data-scenario="city">🏙️ Şehir İçi (Dur-Kalk)</button>
+          <button class="btn-scenario" data-scenario="convoy">🚚 Konvoy (80 km/h)</button>
+          <button class="btn-scenario" data-scenario="drag_race">⚡ 0-100 Test</button>
+          <button class="btn-scenario" data-scenario="idle">🅿️ Park / Rölanti</button>
+        </div>
+      </div>
+
+      <!-- 30 Vehicles Grid List -->
+      <div class="vehicles-grid" id="fleetGrid">
+        <!-- Dynamically populated vehicle cards -->
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: COCKPIT SPEEDOMETER, J1939 INSPECTOR & CAN SNIFFER -->
+    <section class="cockpit-column">
+
+      <!-- 1. VEHICLE COCKPIT SPEEDOMETER & CONTROLS -->
+      <div class="cockpit-card">
+        <div class="active-vehicle-info-banner">
+          <div>
+            <div class="title" id="activeVehicleTitle">Mercedes-Benz Actros 1851</div>
+            <div class="details" id="activeVehicleDetails">34 MB 1851 · OM471 12.8L · J1939 SA: 0x01</div>
+          </div>
+          <div class="j1939-pill">SPN 84 HIZ KONTROLÜ</div>
+        </div>
+
+        <!-- HTML5 Canvas Speedometer Gauge -->
+        <div class="gauge-container">
+          <canvas id="speedGaugeCanvas" width="320" height="220"></canvas>
+        </div>
+
+        <!-- Interactive Speed Slider & Quick Presets -->
+        <div class="cockpit-controls">
+          <div class="speed-slider-row">
+            <label for="speedSlider">Hedef Hız:</label>
+            <input type="range" id="speedSlider" min="0" max="130" value="85">
+            <span class="slider-val-tag" id="speedSliderVal">85 KM/H</span>
+          </div>
+
+          <!-- Speed Presets -->
+          <div class="speed-preset-buttons">
+            <button class="btn-preset" data-speed="0">0 km/h</button>
+            <button class="btn-preset" data-speed="30">30 km/h</button>
+            <button class="btn-preset" data-speed="50">50 km/h</button>
+            <button class="btn-preset" data-speed="70">70 km/h</button>
+            <button class="btn-preset" data-speed="90">90 km/h</button>
+            <button class="btn-preset" data-speed="110">110 km/h</button>
+            <button class="btn-preset" data-speed="130">130 km/h</button>
+          </div>
+
+          <!-- Accelerator & Brake Pedals -->
+          <div class="pedal-controls-row">
+            <button class="btn-pedal accelerate" id="pedalAcc">
+              ⚡ GAZ VER (+10 KM/H)
+            </button>
+            <button class="btn-pedal brake" id="pedalBrake">
+              🛑 FREN YAP (0 KM/H)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. J1939 29-BIT CAN FRAME & SPN 84 INSPECTOR -->
+      <div class="inspector-card">
+        <div class="inspector-title">
+          <span>📡 SAE J1939 29-Bit CAN Çerçeve Ayrıştırıcı (Inspector)</span>
+          <span style="font-size:0.75rem; color:var(--accent-cyan); font-family:var(--font-mono)">CCVS Protocol</span>
+        </div>
+
+        <!-- 29-bit CAN ID Bit Breakdown -->
+        <div class="can-id-breakdown-grid">
+          <div class="id-field-box">
+            <div class="title">CAN ID (29-Bit)</div>
+            <div class="value" id="inspCanId">0x18FEF101</div>
+          </div>
+          <div class="id-field-box">
+            <div class="title">PGN (18-Bit)</div>
+            <div class="value" id="inspPgn">0xFEF1 (65265)</div>
+          </div>
+          <div class="id-field-box">
+            <div class="title">Priority (3-Bit)</div>
+            <div class="value" id="inspPriority">6 (Normal)</div>
+          </div>
+          <div class="id-field-box">
+            <div class="title">Source Addr (SA)</div>
+            <div class="value" id="inspSa">0x01</div>
+          </div>
+        </div>
+
+        <!-- 8-Byte Payload Hex Dump -->
+        <div class="hex-dump-wrap">
+          <div class="hex-dump-label">
+            <span>8-Bayt CAN Yükü (Hex Payload):</span>
+            <span style="color:var(--accent-cyan)">Bayt 1-2: SPN 84 Wheel Speed</span>
+          </div>
+          <div class="hex-bytes-row" id="hexBytesRow">
+            <!-- Populated dynamically (B0 to B7) -->
+          </div>
+          <div class="spn-formula-hint" id="spnFormulaHint">
+            SPN 84 Hız = (Raw Value / 256) km/h
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. LIVE J1939 CAN SNIFFER / TERMINAL -->
+      <div class="sniffer-card">
+        <div class="sniffer-toolbar">
+          <div class="left-tools">
+            <span style="font-family:var(--font-tech); font-weight:700; font-size:0.92rem; color:var(--text-primary)">
+              📟 CAN Bus Sniffer
+            </span>
+            <input type="text" class="sniffer-search-input" id="snifferSearchInput" placeholder="Plaka, CAN ID veya PGN ara...">
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-sniffer-action" id="pauseSnifferBtn">⏸ Duraklat</button>
+            <button class="btn-sniffer-action" id="clearSnifferBtn">🗑️ Temizle</button>
+            <button class="btn-sniffer-action" id="exportSnifferBtn">💾 CSV İndir</button>
+          </div>
+        </div>
+
+        <div class="sniffer-table-container">
+          <table class="sniffer-table">
+            <thead>
+              <tr>
+                <th>Zaman</th>
+                <th>CAN ID</th>
+                <th>PGN</th>
+                <th>Source (Araç)</th>
+                <th>Data (8 Bayt)</th>
+                <th>SPN 84 Hız</th>
+              </tr>
+            </thead>
+            <tbody id="snifferTableBody">
+              <!-- Live rolling rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <p>
+      SAE J1939 Vehicle Speed Simulation Platform · 10 Marka (Mercedes-Benz, Scania, Volvo, MAN, DAF, Iveco, Ford Trucks, Renault, Isuzu, BMC) · 30 Model
+    </p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/gauge.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

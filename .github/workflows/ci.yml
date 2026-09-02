@@ -1,4 +1,4 @@
-name: Python CI & CAN Bus Tests
+name: J1939 Telemetry CI/CD & Docker Pipeline
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  build-and-test:
+  test-and-lint:
+    name: Python ${{ matrix.python-version }} Test & Lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -30,16 +31,34 @@ jobs:
 
     - name: Kod Standartları Kontrolü (Lint with flake8)
       run: |
-        # Sözdizimi (syntax) hatalarını kontrol et
+        # Sözdizimi ve kritik hata denetimi
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Karmaşıklık ve stil uyarıları
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        # Standart stil kontrolleri
+        flake8 . --count --exit-zero --max-complexity=15 --max-line-length=130 --statistics
 
-    - name: Birim Testleri Çalıştır (Pytest)
+    - name: SAE J1939 & Filo Birim Testlerini Çalıştır (Pytest)
       run: |
         pytest tests/ -v
 
-    - name: Sanal CAN Simülasyon Çalışma Testi
+    - name: Simülasyon Çalışma Doğrulaması (Smoke Test)
       run: |
-        # 3 saniyelik sanal CAN sinyal akışını doğrula
-        python -c "import run_simulation, threading, time; t = threading.Thread(target=run_simulation.main, daemon=True); t.start(); time.sleep(3); print('GitHub Actions: Virtual CAN simulation test passed successfully!')"
+        python -c "from j1939.simulator import FleetSimulator; sim = FleetSimulator(); sim.start(); import time; time.sleep(1); sim.stop(); print('J1939 Simulator test OK!')"
+
+  docker-build:
+    name: Docker Image Build & Validation
+    runs-on: ubuntu-latest
+    needs: test-and-lint
+
+    steps:
+    - name: Repoyu Klonla (Checkout)
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: actions/setup-buildx-action@v3
+
+    - name: Docker İmajını Derle (Build Test)
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: j1939-fleet-telemetry:latest

@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  j1939-telemetry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: j1939_fleet_telemetry
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CAN_INTERFACE=virtual
+      - CAN_CHANNEL=j1939_bus
+      - CAN_BITRATE=250000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
