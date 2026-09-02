@@ -1,6 +1,6 @@
 /**
- * J1939 Fleet Telemetry & Monitoring Dashboard
- * Real-Time Monitoring + Smooth Gradual Speed & Braking Controls
+ * J1939 Fleet Telemetry & Central Speed Controller
+ * Single Unified Speed Control Deck for 30 Vehicles
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let brands = [];
   let selectedVehicleId = 'bmw-320i';
   let activeBrandFilter = 'all';
+  let isFleetMode = false; // false: Seçili Araç, true: Tüm Filo
   let snifferPaused = false;
   let snifferSearchQuery = '';
   let ws = null;
@@ -23,10 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const brandFiltersEl = document.getElementById('brandFilters');
   const activeVehicleTitleEl = document.getElementById('activeVehicleTitle');
   const activeVehicleDetailsEl = document.getElementById('activeVehicleDetails');
+  const activeScopePillEl = document.getElementById('activeScopePill');
+  const tabSingleVehicleEl = document.getElementById('tabSingleVehicle');
+  const tabFleetModeEl = document.getElementById('tabFleetMode');
+  const sliderLabelEl = document.getElementById('sliderLabel');
   const speedSliderEl = document.getElementById('speedSlider');
   const speedSliderValEl = document.getElementById('speedSliderVal');
-  const masterSpeedSliderEl = document.getElementById('masterSpeedSlider');
-  const masterSpeedValEl = document.getElementById('masterSpeedVal');
   const btnThrottleEl = document.getElementById('btnThrottle');
   const btnBrakeGradualEl = document.getElementById('btnBrakeGradual');
   const btnBrakeFullEl = document.getElementById('btnBrakeFull');
@@ -136,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Oluştur
+  // 3. 30 Araçlık Izgarayı (Grid) Oluştur (Temiz & Geniş Kartlar)
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -173,38 +176,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="speed-bar-track">
           <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%"></div>
         </div>
-
-        <div class="card-quick-controls">
-          <button class="btn-card-accel" id="card-accel-${v.id}">⚡ +10 Hız Ver</button>
-          <button class="btn-card-brake" id="card-brake-${v.id}">🛑 -15 Fren</button>
-        </div>
       `;
 
-      // Kart Tıklama ile Seçim
-      card.addEventListener('click', (e) => {
-        if (e.target.tagName.toLowerCase() === 'button') return;
+      // Kart Tıklaması -> Tek Merkezden Kontrol Edilen Aracı Değiştirir
+      card.addEventListener('click', () => {
         selectVehicle(v.id);
-      });
-
-      // Kart Hız Verme Butonu
-      card.querySelector(`#card-accel-${v.id}`).addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectVehicle(v.id);
-        sendAccelerateCommand(v.id, 10.0);
-      });
-
-      // Kart Fren Butonu
-      card.querySelector(`#card-brake-${v.id}`).addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectVehicle(v.id);
-        sendDecelerateCommand(v.id, 15.0);
       });
 
       fleetGridEl.appendChild(card);
     });
   }
 
-  // 4. Canlı Veri Akışında Hız Sayılarını Güncelle
+  // 4. Canlı Güncelleme
   function updateFleetGridRealtime() {
     fleet.forEach(v => {
       const numEl = document.getElementById(`speed-num-${v.id}`);
@@ -233,14 +216,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    activeVehicleTitleEl.textContent = `${v.brand_name} ${v.model}`;
-    activeVehicleDetailsEl.textContent = `${v.plate} · ${v.engine} · J1939 SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+    if (isFleetMode) {
+      activeVehicleTitleEl.textContent = `🌐 TÜM FİLO KONTROLÜ (30 ARAÇ)`;
+      activeVehicleDetailsEl.textContent = `10 Marka Eş Zamanlı Yönetiliyor · Seçili Örnek: ${v.brand_name} ${v.model}`;
+      activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
+      activeScopePillEl.style.borderColor = 'var(--accent-amber)';
+      activeScopePillEl.style.color = 'var(--accent-amber)';
+    } else {
+      activeVehicleTitleEl.textContent = `${v.brand_name} ${v.model}`;
+      activeVehicleDetailsEl.textContent = `${v.plate} · ${v.engine} · J1939 SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
+      activeScopePillEl.style.borderColor = 'var(--accent-cyan)';
+      activeScopePillEl.style.color = 'var(--accent-cyan)';
+    }
 
     // Kadranı Güncelle
     gauge.setSpeed(v.current_speed, v.max_speed);
 
-    // Hız Slider'ı Güncelle
-    if (speedSliderEl) {
+    // Hız Slider'ını Güncelle (Sadece kullanıcı slider'ı sürüklemiyorsa)
+    if (speedSliderEl && !speedSliderEl.matches(':active')) {
       speedSliderEl.max = v.max_speed;
       speedSliderEl.value = Math.round(v.target_speed);
       speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
@@ -281,58 +275,68 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  // 6. Komut Gönderme Fonksiyonları (Yumuşak & Kademeli)
-  function sendSpeedCommand(vehicleId, speed) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_speed',
-        vehicle_id: vehicleId,
-        speed: speed
-      }));
+  // 6. Tek Merkezden Hız ve Fren Komutu Gönderme
+  function applySpeed(speed) {
+    if (isFleetMode) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'set_fleet_speed', speed: speed }));
+      } else {
+        fetch('/api/fleet/speed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ speed: speed })
+        });
+      }
     } else {
-      fetch(`/api/vehicle/${vehicleId}/speed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: speed, mode: 'manual' })
-      });
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'set_speed', vehicle_id: selectedVehicleId, speed: speed }));
+      } else {
+        fetch(`/api/vehicle/${selectedVehicleId}/speed`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ speed: speed, mode: 'manual' })
+        });
+      }
     }
   }
 
-  function sendAccelerateCommand(vehicleId, delta = 10.0) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'accelerate',
-        vehicle_id: vehicleId,
-        delta: delta
-      }));
+  function applyAccelerate(delta = 10.0) {
+    if (isFleetMode) {
+      const v = fleet.find(item => item.id === selectedVehicleId);
+      const currentTarget = v ? v.target_speed : 90.0;
+      applySpeed(currentTarget + delta);
+    } else {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'accelerate', vehicle_id: selectedVehicleId, delta: delta }));
+      }
     }
   }
 
-  function sendDecelerateCommand(vehicleId, delta = 15.0) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'decelerate',
-        vehicle_id: vehicleId,
-        delta: delta
-      }));
+  function applyDecelerate(delta = 15.0) {
+    if (isFleetMode) {
+      const v = fleet.find(item => item.id === selectedVehicleId);
+      const currentTarget = v ? v.target_speed : 90.0;
+      applySpeed(Math.max(0, currentTarget - delta));
+    } else {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'decelerate', vehicle_id: selectedVehicleId, delta: delta }));
+      }
     }
   }
 
-  function sendFullStopCommand(vehicleId) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'full_stop',
-        vehicle_id: vehicleId
-      }));
+  function applyFullStop() {
+    if (isFleetMode) {
+      applySpeed(0.0);
+    } else {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'full_stop', vehicle_id: selectedVehicleId }));
+      }
     }
   }
 
-  function sendScenarioCommand(scenario) {
+  function applyScenario(scenario) {
     if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_scenario',
-        scenario: scenario
-      }));
+      ws.send(JSON.stringify({ action: 'set_scenario', scenario: scenario }));
     } else {
       fetch('/api/fleet/scenario', {
         method: 'POST',
@@ -342,85 +346,73 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function sendMasterFleetSpeed(speed) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_fleet_speed',
-        speed: speed
-      }));
-    } else {
-      fetch('/api/fleet/speed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: speed })
-      });
-    }
-  }
+  // 7. Kontrol Alanı Olay Dinleyicileri
 
-  // 7. Kontrol Olay Dinleyicileri
-  if (speedSliderEl) {
-    speedSliderEl.addEventListener('input', (e) => {
-      const spd = parseFloat(e.target.value);
-      speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
-      sendSpeedCommand(selectedVehicleId, spd);
-    });
-  }
+  // Scope Tabları (Seçili Araç vs Tüm Filo)
+  tabSingleVehicleEl.addEventListener('click', () => {
+    isFleetMode = false;
+    tabSingleVehicleEl.classList.add('active');
+    tabFleetModeEl.classList.remove('active');
+    sliderLabelEl.textContent = 'Hedef Hız:';
+    updateSelectedVehicleView();
+  });
 
+  tabFleetModeEl.addEventListener('click', () => {
+    isFleetMode = true;
+    tabFleetModeEl.classList.add('active');
+    tabSingleVehicleEl.classList.remove('active');
+    sliderLabelEl.textContent = 'Filo Hedef Hızı:';
+    updateSelectedVehicleView();
+  });
+
+  // Hız Slider'ı
+  speedSliderEl.addEventListener('input', (e) => {
+    const spd = parseFloat(e.target.value);
+    speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
+    applySpeed(spd);
+  });
+
+  // Hazır Butonlar
   document.querySelectorAll('.btn-preset').forEach(btn => {
     btn.addEventListener('click', () => {
       const spd = parseFloat(btn.dataset.speed);
-      if (speedSliderEl) {
-        speedSliderEl.value = spd;
-        speedSliderValEl.textContent = `${spd} KM/H`;
-      }
-      sendSpeedCommand(selectedVehicleId, spd);
+      speedSliderEl.value = spd;
+      speedSliderValEl.textContent = `${spd} KM/H`;
+      applySpeed(spd);
     });
   });
 
-  if (btnThrottleEl) {
-    btnThrottleEl.addEventListener('click', () => {
-      sendAccelerateCommand(selectedVehicleId, 10.0);
-    });
-  }
+  // Gaz & Fren Pedalları
+  btnThrottleEl.addEventListener('click', () => {
+    applyAccelerate(10.0);
+  });
 
-  if (btnBrakeGradualEl) {
-    btnBrakeGradualEl.addEventListener('click', () => {
-      sendDecelerateCommand(selectedVehicleId, 15.0);
-    });
-  }
+  btnBrakeGradualEl.addEventListener('click', () => {
+    applyDecelerate(15.0);
+  });
 
-  if (btnBrakeFullEl) {
-    btnBrakeFullEl.addEventListener('click', () => {
-      sendFullStopCommand(selectedVehicleId);
-    });
-  }
+  btnBrakeFullEl.addEventListener('click', () => {
+    applyFullStop();
+  });
 
+  // Senaryolar
   document.querySelectorAll('.btn-scenario').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       const scen = btn.dataset.scenario;
-      sendScenarioCommand(scen);
+      applyScenario(scen);
     });
   });
 
-  if (masterSpeedSliderEl) {
-    masterSpeedSliderEl.addEventListener('input', (e) => {
-      const spd = parseFloat(e.target.value);
-      masterSpeedValEl.textContent = `${Math.round(spd)} KM/H`;
-      sendMasterFleetSpeed(spd);
-    });
-  }
-
-  if (btnEmergencyStopEl) {
-    btnEmergencyStopEl.addEventListener('click', () => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'emergency_stop' }));
-      } else {
-        fetch('/api/fleet/emergency-stop', { method: 'POST' });
-      }
-    });
-  }
+  // Acil Durdurma
+  btnEmergencyStopEl.addEventListener('click', () => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: 'emergency_stop' }));
+    } else {
+      fetch('/api/fleet/emergency-stop', { method: 'POST' });
+    }
+  });
 
   // 8. CAN Sniffer
   function processSnifferFrame(frame) {
