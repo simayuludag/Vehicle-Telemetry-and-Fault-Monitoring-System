@@ -1,6 +1,6 @@
 /**
  * J1939 Multi-Signal Fleet Telemetry & Central Controller
- * Features: Live Internet Vehicle Photos, Speed (SPN 84), Throttle (SPN 91), Brake (SPN 563), Gear (SPN 523), Battery (SPN 3543/5328)
+ * Features: 30 Distinct Local Vehicle Visuals, Speed (SPN 84), Throttle (SPN 91), Brake (SPN 563), Gear (SPN 523), Battery (SPN 3543/5328)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,8 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const fleetGridEl = document.getElementById('fleetGrid');
   const brandFiltersEl = document.getElementById('brandFilters');
   const activeVehiclePhotoEl = document.getElementById('activeVehiclePhoto');
-  const showcaseVehicleNameEl = document.getElementById('showcaseVehicleName');
-  const showcaseVehicleSpecsEl = document.getElementById('showcaseVehicleSpecs');
   const activeScopePillEl = document.getElementById('activeScopePill');
   const tabSingleVehicleEl = document.getElementById('tabSingleVehicle');
   const tabFleetModeEl = document.getElementById('tabFleetMode');
@@ -154,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Fotoğraflarla Oluştur
+  // 3. 30 Araçlık Izgarayı (Grid) Oluştur (Garantili & Geniş Kartlar)
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -169,35 +167,34 @@ document.addEventListener('DOMContentLoaded', () => {
       card.id = `card-${v.id}`;
       card.dataset.id = v.id;
 
-      const imgUrl = v.image_url || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
-
       card.innerHTML = `
-        <div class="card-thumb-wrap">
-          <img src="${imgUrl}" class="card-thumb-img" alt="${v.model}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80'">
-          <div class="card-thumb-overlay"></div>
-          <span class="card-brand-badge-overlay" style="border-left: 3px solid ${brand.color}">${v.brand_name}</span>
-          <span class="card-sa-badge-overlay">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</span>
+        <div class="vehicle-card-top-row">
+          <div class="brand-badge-pill" style="border-left: 3px solid ${brand.color}">
+            <span style="color:${brand.color}">●</span>
+            ${v.brand_name}
+          </div>
+          <div class="sa-pill">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</div>
         </div>
         
-        <div class="vehicle-model-name">${v.model}</div>
-        <div class="vehicle-plate">${v.plate} · ${v.category}</div>
+        <div class="vehicle-model-title">${v.model}</div>
+        <div class="vehicle-specs-line">${v.plate} · ${v.category}</div>
         
-        <div class="vehicle-speed-row">
-          <div class="speed-digital-display">
-            <span class="speed-num" id="speed-num-${v.id}">${Math.round(v.current_speed)}</span>
-            <span class="unit" style="font-size:0.75rem; color:#00d2ff; font-family:'JetBrains Mono', monospace">KM/H</span>
+        <div class="vehicle-speed-line">
+          <div class="speed-readout">
+            <span id="speed-num-${v.id}">${Math.round(v.current_speed)}</span>
+            <span class="unit">KM/H</span>
           </div>
           <div class="status-badge ${v.status}" id="status-badge-${v.id}">${v.status}</div>
         </div>
 
-        <div class="card-signals-pill-row" style="display:flex; gap:6px; margin-top:2px; font-family:'JetBrains Mono', monospace; font-size:0.72rem">
-          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#f59e0b; font-weight:700" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
-          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#10b981" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
-          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#00d2ff" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
+        <div class="card-telemetry-pills">
+          <span class="pill-gear" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
+          <span class="pill-soc" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
+          <span class="pill-throttle" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
         </div>
 
-        <div class="speed-bar-track" style="height:5px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-top:3px">
-          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%; height:100%; background:linear-gradient(90deg, #00d2ff, #10b981); border-radius:4px"></div>
+        <div class="speed-bar-track">
+          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%"></div>
         </div>
       `;
 
@@ -244,21 +241,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    // 1. Araç Fotoğrafını ve Başlığını Güncelle
+    // 1. Seçili Aracın Özel Görsel Kartını Yükle (30 Ayrı Görsel)
     if (activeVehiclePhotoEl) {
-      activeVehiclePhotoEl.src = v.image_url || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
+      activeVehiclePhotoEl.src = `/static/images/cars/${v.id}.svg`;
       activeVehiclePhotoEl.alt = `${v.brand_name} ${v.model}`;
     }
-    if (showcaseVehicleNameEl) showcaseVehicleNameEl.textContent = `${v.brand_name} ${v.model}`;
-    if (showcaseVehicleSpecsEl) showcaseVehicleSpecsEl.textContent = `${v.plate} · ${v.engine} · SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
 
     if (isFleetMode) {
-      if (showcaseVehicleNameEl) showcaseVehicleNameEl.textContent = `🌐 TÜM FİLO (30 ARAÇ) MASTER KONTROLÜ`;
-      activeScopePillEl.textContent = 'MASTER FİLO';
+      activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
       activeScopePillEl.style.borderColor = '#f59e0b';
       activeScopePillEl.style.color = '#f59e0b';
     } else {
-      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ';
+      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
       activeScopePillEl.style.borderColor = '#00d2ff';
       activeScopePillEl.style.color = '#00d2ff';
     }
