@@ -24,17 +24,17 @@ def test_api_health(client):
 
 
 def test_api_get_brands(client):
-    """10 marka listesi endpoint testi"""
+    """10 binek marka listesi endpoint testi"""
     response = client.get("/api/brands")
     assert response.status_code == 200
     brands = response.json()
     assert len(brands) == 10
     brand_names = [b["name"] for b in brands]
+    assert "BMW" in brand_names
     assert "Mercedes-Benz" in brand_names
-    assert "Scania" in brand_names
-    assert "Volvo Trucks" in brand_names
-    assert "Ford Trucks" in brand_names
-    assert "BMC Otomotiv" in brand_names
+    assert "Audi" in brand_names
+    assert "Tesla" in brand_names
+    assert "Toyota" in brand_names
 
 
 def test_api_get_fleet(client):
@@ -47,11 +47,11 @@ def test_api_get_fleet(client):
 
 def test_api_get_single_vehicle(client):
     """Tek araç detay endpoint testi"""
-    response = client.get("/api/vehicle/mb-actros-1851")
+    response = client.get("/api/vehicle/bmw-320i")
     assert response.status_code == 200
     v = response.json()
-    assert v["id"] == "mb-actros-1851"
-    assert v["brand_name"] == "Mercedes-Benz"
+    assert v["id"] == "bmw-320i"
+    assert v["brand_name"] == "BMW"
     assert v["source_address"] == 0x01
 
     # Geçersiz araç testi
@@ -61,21 +61,21 @@ def test_api_get_single_vehicle(client):
 
 def test_api_update_vehicle_speed(client):
     """Araç hız güncelleme endpoint testi"""
-    payload = {"speed": 95.5, "mode": "highway"}
-    response = client.post("/api/vehicle/scania-770s-v8/speed", json=payload)
+    payload = {"speed": 135.5, "mode": "highway"}
+    response = client.post("/api/vehicle/tesla-model-3-perf/speed", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["target_speed"] == 95.5
+    assert data["target_speed"] == 135.5
 
     # Güncellenen aracı doğrula
-    v_res = client.get("/api/vehicle/scania-770s-v8")
-    assert v_res.json()["target_speed"] == 95.5
+    v_res = client.get("/api/vehicle/tesla-model-3-perf")
+    assert v_res.json()["target_speed"] == 135.5
 
 
 def test_api_brake_vehicle(client):
     """Araç fren endpoint testi"""
-    response = client.post("/api/vehicle/volvo-fh16-750/brake", json={"pressed": True})
+    response = client.post("/api/vehicle/bmw-m4-competition/brake", json={"pressed": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
@@ -84,11 +84,11 @@ def test_api_brake_vehicle(client):
 
 def test_api_set_fleet_speed(client):
     """Tüm filo hız atama testi"""
-    response = client.post("/api/fleet/speed", json={"speed": 75.0})
+    response = client.post("/api/fleet/speed", json={"speed": 95.0})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "ok"
-    assert data["target_speed"] == 75.0
+    assert data["target_speed"] == 95.0
 
 
 def test_api_apply_scenario(client):
@@ -113,9 +113,16 @@ def test_api_can_history(client):
     assert isinstance(response.json(), list)
 
 
-def test_index_page_served(client):
-    """Ana web sayfasının başarıyla sunulduğunu doğrular"""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert "J1939 Fleet Telemetry" in response.text
-    assert "speedGaugeCanvas" in response.text
+def test_index_and_control_pages_served(client):
+    """Ortam 1 (Control) ve Ortam 2 (Monitor) sayfalarının başarıyla sunulduğunu doğrular"""
+    # Ortam 2 (Monitor)
+    res_index = client.get("/")
+    assert res_index.status_code == 200
+    assert "J1939 Telemetri" in res_index.text
+    assert "speedGaugeCanvas" in res_index.text
+
+    # Ortam 1 (Control)
+    res_control = client.get("/control")
+    assert res_control.status_code == 200
+    assert "Sinyal Gönderici" in res_control.text
+    assert "mainSpeedSlider" in res_control.text

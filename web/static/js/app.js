@@ -1,20 +1,20 @@
 /**
- * J1939 Fleet Telemetry & Web Dashboard Application
- * Handles Real-Time WebSockets, Fleet State, CAN Sniffer, and Interactive Controls
+ * J1939 Fleet Telemetry & Monitoring Dashboard (Environment 2)
+ * Pure Live Monitoring: Canvas Speedometer Gauge, CAN Sniffer, and Bit Inspector
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   // Global State
   let fleet = [];
   let brands = [];
-  let selectedVehicleId = 'mb-actros-1851';
+  let selectedVehicleId = 'bmw-320i';
   let activeBrandFilter = 'all';
   let snifferPaused = false;
   let snifferSearchQuery = '';
   let ws = null;
   let gauge = null;
 
-  // CAN Sniffer Rolling Log (Maksimum 100 satır DOM'da tutulur)
+  // CAN Sniffer Rolling Log (Maksimum 100 satır)
   const maxSnifferRows = 100;
   const canLogList = [];
 
@@ -23,10 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const brandFiltersEl = document.getElementById('brandFilters');
   const activeVehicleTitleEl = document.getElementById('activeVehicleTitle');
   const activeVehicleDetailsEl = document.getElementById('activeVehicleDetails');
-  const speedSliderEl = document.getElementById('speedSlider');
-  const speedSliderValEl = document.getElementById('speedSliderVal');
-  const masterSpeedSliderEl = document.getElementById('masterSpeedSlider');
-  const masterSpeedValEl = document.getElementById('masterSpeedVal');
+  const telemetryStatusValEl = document.getElementById('telemetryStatusVal');
+  const telemetryMaxSpeedValEl = document.getElementById('telemetryMaxSpeedVal');
+  const telemetrySaValEl = document.getElementById('telemetrySaVal');
   const snifferTableBodyEl = document.getElementById('snifferTableBody');
   const snifferSearchInputEl = document.getElementById('snifferSearchInput');
   const pauseSnifferBtn = document.getElementById('pauseSnifferBtn');
@@ -124,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
       brandFiltersEl.appendChild(btn);
     });
 
-    // Tümü Butonu Dinleyicisi
     brandFiltersEl.querySelector('[data-brand="all"]').addEventListener('click', (e) => {
       activeBrandFilter = 'all';
       document.querySelectorAll('.brand-chip').forEach(c => c.classList.remove('active'));
@@ -133,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Oluştur
+  // 3. 30 Araçlık Izgarayı (Grid) Oluştur (Pure Monitoring Card)
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -171,38 +169,21 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%"></div>
         </div>
 
-        <div class="card-quick-controls">
-          <input type="range" min="0" max="${v.max_speed}" value="${Math.round(v.target_speed)}" 
-                 id="card-slider-${v.id}" title="Hız Ver" />
-          <button class="btn-card-brake" id="card-brake-${v.id}">FREN</button>
+        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono);">
+          <span>Maks: ${v.max_speed} km/h</span>
+          <span style="color:var(--accent-cyan)">🔍 Kadranda İzle</span>
         </div>
       `;
 
-      // Kart Seçimi
-      card.addEventListener('click', (e) => {
-        if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button') return;
+      card.addEventListener('click', () => {
         selectVehicle(v.id);
-      });
-
-      // Kart Üzerinden Hız Verme Slider'ı
-      const cardSlider = card.querySelector(`#card-slider-${v.id}`);
-      cardSlider.addEventListener('input', (e) => {
-        const newSpeed = parseFloat(e.target.value);
-        sendSpeedCommand(v.id, newSpeed);
-      });
-
-      // Kart Fren Butonu
-      const cardBrake = card.querySelector(`#card-brake-${v.id}`);
-      cardBrake.addEventListener('click', () => {
-        sendBrakeCommand(v.id, true);
-        cardSlider.value = 0;
       });
 
       fleetGridEl.appendChild(card);
     });
   }
 
-  // 4. Canlı Veri Akışında DOM'u Minimum Yükle Güncelle
+  // 4. Canlı Güncelleme
   function updateFleetGridRealtime() {
     fleet.forEach(v => {
       const numEl = document.getElementById(`speed-num-${v.id}`);
@@ -218,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Araç Seçimi ve Gösterge Paneli / Inspector Güncellemesi
+  // 5. Araç Seçimi & Kadran Güncelleme
   function selectVehicle(vehicleId) {
     selectedVehicleId = vehicleId;
     document.querySelectorAll('.vehicle-card').forEach(c => {
@@ -231,22 +212,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    // Başlık ve Detaylar
     activeVehicleTitleEl.textContent = `${v.brand_name} ${v.model}`;
     activeVehicleDetailsEl.textContent = `${v.plate} · ${v.engine} · J1939 SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+    telemetryStatusValEl.textContent = v.status.toUpperCase();
+    telemetryMaxSpeedValEl.textContent = `${v.max_speed} km/h`;
+    telemetrySaValEl.textContent = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
 
-    // Kadran (Gauge) Güncelle
+    // Kadranı Güncelle
     gauge.setSpeed(v.current_speed, v.max_speed);
 
-    // Slider
-    speedSliderEl.max = v.max_speed;
-    speedSliderEl.value = Math.round(v.target_speed);
-    speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
-
-    // J1939 CAN Frame Inspector Güncelle
+    // Inspector
     const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
     const priority = 6;
-    const pgn = 65265; // 0xFEF1 CCVS
+    const pgn = 65265;
     const canId = (priority << 26) | (pgn << 8) | v.source_address;
     const canIdHex = `0x${canId.toString(16).toUpperCase().padStart(8, '0')}`;
 
@@ -255,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
     inspPriorityEl.textContent = `${priority} (Normal)`;
     inspSaEl.textContent = saHex;
 
-    // 8-Bayt Hex Dump ve SPN 84 Hız Hesabı
     const rawSpeed = Math.round(v.current_speed * 256);
     const b1 = rawSpeed & 0xFF;
     const b2 = (rawSpeed >> 8) & 0xFF;
@@ -279,133 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
   }
 
-  // 6. Kontrol Komutları Gönderme
-  function sendSpeedCommand(vehicleId, speed) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_speed',
-        vehicle_id: vehicleId,
-        speed: speed
-      }));
-    } else {
-      fetch(`/api/vehicle/${vehicleId}/speed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: speed, mode: 'manual' })
-      });
-    }
-  }
-
-  function sendBrakeCommand(vehicleId, pressed) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'brake',
-        vehicle_id: vehicleId,
-        pressed: pressed
-      }));
-    } else {
-      fetch(`/api/vehicle/${vehicleId}/brake`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pressed: pressed })
-      });
-    }
-  }
-
-  function sendScenarioCommand(scenario) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_scenario',
-        scenario: scenario
-      }));
-    } else {
-      fetch('/api/fleet/scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenario })
-      });
-    }
-  }
-
-  function sendMasterFleetSpeed(speed) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        action: 'set_fleet_speed',
-        speed: speed
-      }));
-    } else {
-      fetch('/api/fleet/speed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: speed })
-      });
-    }
-  }
-
-  // 7. Cockpit Arayüzü Olay Dinleyicileri
-  speedSliderEl.addEventListener('input', (e) => {
-    const spd = parseFloat(e.target.value);
-    speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
-    sendSpeedCommand(selectedVehicleId, spd);
-  });
-
-  // Hız Hazır Butonları (0, 30, 50, 70, 90, 110, 120 km/h)
-  document.querySelectorAll('.btn-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const spd = parseFloat(btn.dataset.speed);
-      speedSliderEl.value = spd;
-      speedSliderValEl.textContent = `${spd} KM/H`;
-      sendSpeedCommand(selectedVehicleId, spd);
-    });
-  });
-
-  // Gaz & Fren Pedalları
-  const pedalAccEl = document.getElementById('pedalAcc');
-  const pedalBrakeEl = document.getElementById('pedalBrake');
-
-  pedalAccEl.addEventListener('click', () => {
-    const v = fleet.find(item => item.id === selectedVehicleId);
-    if (v) {
-      const nextSpeed = Math.min(v.max_speed, v.target_speed + 10);
-      speedSliderEl.value = nextSpeed;
-      speedSliderValEl.textContent = `${Math.round(nextSpeed)} KM/H`;
-      sendSpeedCommand(selectedVehicleId, nextSpeed);
-    }
-  });
-
-  pedalBrakeEl.addEventListener('click', () => {
-    speedSliderEl.value = 0;
-    speedSliderValEl.textContent = '0 KM/H';
-    sendBrakeCommand(selectedVehicleId, true);
-  });
-
-  // Filo Senaryo Butonları
-  document.querySelectorAll('.btn-scenario').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const scen = btn.dataset.scenario;
-      sendScenarioCommand(scen);
-    });
-  });
-
-  // Master Filo Hız Slider'ı
-  masterSpeedSliderEl.addEventListener('input', (e) => {
-    const spd = parseFloat(e.target.value);
-    masterSpeedValEl.textContent = `${Math.round(spd)} KM/H`;
-    sendMasterFleetSpeed(spd);
-  });
-
-  // Acil Durdurma Butonu
-  document.getElementById('btnEmergencyStop').addEventListener('click', () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'emergency_stop' }));
-    } else {
-      fetch('/api/fleet/emergency-stop', { method: 'POST' });
-    }
-  });
-
-  // 8. CAN Sniffer / Terminal Yönetimi
+  // 6. CAN Sniffer
   function processSnifferFrame(frame) {
     canLogList.unshift(frame);
     if (canLogList.length > maxSnifferRows) canLogList.pop();
@@ -457,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
     snifferTableBodyEl.innerHTML = '';
   });
 
-  // CAN Log Dışa Aktarma (CSV)
   exportSnifferBtn.addEventListener('click', () => {
     if (canLogList.length === 0) {
       alert('Dışa aktarılacak CAN mesajı yok!');
@@ -484,6 +334,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.removeChild(link);
   });
 
-  // WebSocket Başlat
   initWebSocket();
 });

@@ -111,11 +111,21 @@ if os.path.exists(STATIC_DIR):
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    """Ana Telemetri ve Gösterge Paneli Web Sayfası"""
+    """Ortam 2: Ana Telemetri ve Gösterge Paneli Web Sayfası (Monitor)"""
     index_path = os.path.join(TEMPLATES_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return HTMLResponse("<h1>J1939 Web Platform Hazırlanıyor...</h1>")
+    return HTMLResponse("<h1>J1939 Web Platform Hazirlaniyor...</h1>")
+
+
+@app.get("/control", response_class=HTMLResponse)
+@app.get("/sender", response_class=HTMLResponse)
+async def serve_control():
+    """Ortam 1: Bağımsız Hız Verme & Sinyal Gönderici Web Paneli (Transmitter)"""
+    ctrl_path = os.path.join(TEMPLATES_DIR, "control.html")
+    if os.path.exists(ctrl_path):
+        return FileResponse(ctrl_path)
+    return HTMLResponse("<h1>J1939 Kontrol Paneli Hazirlaniyor...</h1>")
 
 
 # --- REST API ENDPOINT'LERİ ---
@@ -282,11 +292,11 @@ def main():
     os.environ["CAN_BITRATE"] = str(args.bitrate)
 
     print("=" * 70)
-    print(" 🚀 J1939 Fleet Telemetry Web Platform Başlatılıyor...")
-    print(f" 🌐 Web Dashboard: http://localhost:{args.port}")
-    print(f" 🔌 CAN Arayüzü : {args.interface.upper()} (Kanal: {args.channel} @ {args.bitrate} bps)")
-    print(f" 🚛 Filo Boyutu  : 10 Marka x 3 Model = 30 Araç (J1939 SA: 0x01..0x1E)")
-    print(f" 📡 Sinyal Kapsamı: PGN 65265 (0xFEF1 - CCVS) / SPN 84 (Wheel-Based Speed)")
+    print(" [*] J1939 Fleet Telemetry Web Platform Baslatiliyor...")
+    print(f" [*] Web Dashboard: http://localhost:{args.port}")
+    print(f" [*] CAN Arayuzu  : {args.interface.upper()} (Kanal: {args.channel} @ {args.bitrate} bps)")
+    print(f" [*] Filo Boyutu   : 10 Marka x 3 Model = 30 Arac (J1939 SA: 0x01..0x1E)")
+    print(f" [*] Sinyal        : PGN 65265 (0xFEF1 - CCVS) / SPN 84 (Wheel-Based Speed)")
     print("=" * 70)
 
     uvicorn.run("server:app", host=args.host, port=args.port, reload=args.reload)

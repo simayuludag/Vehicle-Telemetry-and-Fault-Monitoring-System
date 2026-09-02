@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>J1939 Hız Verme & Sinyal Gönderici Paneli (Transmitter)</title>
+  <meta name="description" content="SAE J1939 30 Araç İçin Bağımsız Hız Kontrolü ve CAN Sinyal Gönderici Arayüzü.">
+  
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
+  <style>
+    /* Kontrol Paneline Özel Stil İyileştirmeleri */
+    .control-header-banner {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.15) 0%, rgba(59, 130, 246, 0.05) 100%);
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: var(--radius-lg);
+      padding: 18px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-nav-monitor {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--accent-emerald);
+      font-family: var(--font-tech);
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition-smooth);
+    }
+    .btn-nav-monitor:hover {
+      background: var(--accent-emerald);
+      color: #07090e;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+    .active-control-card {
+      background: rgba(0, 210, 255, 0.05);
+      border: 1px solid var(--accent-cyan);
+      box-shadow: 0 0 25px rgba(0, 210, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand-section">
+      <div class="logo-badge" style="background:linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)">TX</div>
+      <div class="brand-title">
+        <h1>
+          J1939 Sinyal Gönderici & Kontrol Ortamı
+          <span class="j1939-pill" style="border-color:var(--accent-amber); color:var(--accent-amber)">ORTAM 1: SENDER / TRANSMITTER</span>
+        </h1>
+        <p>10 Marka · 30 Binek & SUV Araç İçin Anlık Hız Belirleme ve CAN Sinyal Gönderimi</p>
+      </div>
+    </div>
+
+    <div class="telemetry-metrics-bar">
+      <div class="metric-pill">
+        <span class="dot" id="wsStatusDot"></span>
+        <span class="label">SİNYAL HATTI:</span>
+        <span class="val" id="wsStatusText">BAĞLANIYOR...</span>
+      </div>
+      <div class="metric-pill">
+        <span class="label">MOD:</span>
+        <span class="val" style="color:var(--accent-amber)">KONTROL / TRANSMITTER</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <a href="/" target="_blank" class="btn-nav-monitor" title="İzleme Ekranını Ayrı Sekmede Aç">
+        📺 İZLEME EKRANINI AÇ (MONITOR) ↗
+      </a>
+      <button class="btn-emergency-stop" id="btnEmergencyStop">
+        🛑 TÜMÜNÜ DURDUR
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="main-container" style="grid-template-columns: 1fr 1fr;">
+
+    <!-- LEFT COLUMN: VEHICLE SELECTION & DIRECT SPEED INPUT -->
+    <section class="panel-card active-control-card">
+      <div class="panel-header">
+        <div class="panel-header-title">
+          <h2>🎯 Aktif Kontrol Edilen Araç (Target Vehicle)</h2>
+        </div>
+        <div class="j1939-pill" id="targetSaTag">SA: 0x01</div>
+      </div>
+
+      <div style="padding: 24px;">
+        <!-- Selected Vehicle Info -->
+        <div style="margin-bottom: 20px;">
+          <h2 id="ctrlVehicleName" style="font-family:var(--font-tech); font-size:1.6rem; color:var(--text-primary); margin-bottom:4px;">
+            BMW 320i Sedan M Sport
+          </h2>
+          <p id="ctrlVehicleDetails" style="font-family:var(--font-mono); font-size:0.85rem; color:var(--text-muted)">
+            34 BMW 320 · 2.0L TwinPower Turbo 170 HP · Maks: 235 km/h
+          </p>
+        </div>
+
+        <!-- BIG SPEED INPUT DIAL / SLIDER -->
+        <div style="background:rgba(0,0,0,0.4); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:24px; text-align:center; margin-bottom:24px;">
+          <div style="font-size:0.85rem; color:var(--text-muted); margin-bottom:8px;">HEDEF HIZ (TARGET SPEED)</div>
+          <div style="font-family:var(--font-tech); font-size:3.5rem; font-weight:700; color:var(--accent-cyan); line-height:1; margin-bottom:14px;">
+            <span id="targetSpeedDisplay">110</span> <span style="font-size:1.2rem; color:var(--text-muted); font-family:var(--font-mono)">KM/H</span>
+          </div>
+
+          <!-- Master Slider -->
+          <input type="range" id="mainSpeedSlider" min="0" max="250" value="110" 
+                 style="width:100%; height:12px; accent-color:var(--accent-cyan); cursor:pointer; margin-bottom:18px;">
+
+          <!-- Preset Speed Buttons -->
+          <div class="speed-preset-buttons" style="margin-bottom:18px;">
+            <button class="btn-preset" data-speed="0">0 (Dur)</button>
+            <button class="btn-preset" data-speed="50">50 km/h</button>
+            <button class="btn-preset" data-speed="90">90 km/h</button>
+            <button class="btn-preset" data-speed="120">120 km/h</button>
+            <button class="btn-preset" data-speed="140">140 km/h</button>
+            <button class="btn-preset" data-speed="180">180 km/h</button>
+            <button class="btn-preset" data-speed="220">220 km/h</button>
+          </div>
+
+          <!-- Throttle & Brake Pedals -->
+          <div class="pedal-controls-row">
+            <button class="btn-pedal accelerate" id="btnThrottle" style="padding:16px;">
+              ⚡ GAZ VER (+15 KM/H)
+            </button>
+            <button class="btn-pedal brake" id="btnBrake" style="padding:16px;">
+              🛑 FREN YAP (0 KM/H)
+            </button>
+          </div>
+        </div>
+
+        <!-- J1939 CAN Frame Generation Preview -->
+        <div class="inspector-card" style="padding:16px;">
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between;">
+            <span>ÜRETİLEN J1939 29-BİT CAN MESAJI:</span>
+            <span style="color:var(--accent-emerald)" id="txStatusIndicator">● CAN YAYINI AKTİF</span>
+          </div>
+          <div style="font-family:var(--font-mono); font-size:0.9rem; background:rgba(0,0,0,0.5); padding:10px; border-radius:6px; color:var(--accent-cyan);" id="txCanFramePreview">
+            CAN ID: 0x18FEF101 | PGN: 0xFEF1 | SPN 84 Hız: 110.00 km/h | Data: FF 00 6E FF FF FF FF FF
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: 30 VEHICLE FLEET LIST & BULK CONTROLS -->
+    <section class="panel-card">
+      <div class="panel-header">
+        <div class="panel-header-title">
+          <h2>🚗 Hız Verilecek Aracı Seçin (30 Model)</h2>
+        </div>
+        <div class="master-speed-control">
+          <label for="masterSpeedSlider">Tüm Filo:</label>
+          <input type="range" id="masterSpeedSlider" min="0" max="180" value="90">
+          <span id="masterSpeedVal" style="font-family:var(--font-mono); font-size:0.8rem; font-weight:700; color:var(--accent-cyan)">90 KM/H</span>
+        </div>
+      </div>
+
+      <!-- Brand Filter Tabs -->
+      <div class="brand-filters-wrap" id="brandFilters">
+        <!-- Dynamically populated with 10 brands -->
+      </div>
+
+      <!-- Scenarios Bar -->
+      <div class="fleet-scenarios-bar">
+        <div class="scenario-btns">
+          <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Senaryolar:</span>
+          <button class="btn-scenario active" data-scenario="normal">🚦 Normal</button>
+          <button class="btn-scenario" data-scenario="highway">🛣️ Otoyol (120 km/h)</button>
+          <button class="btn-scenario" data-scenario="city">🏙️ Şehir İçi (50 km/h)</button>
+          <button class="btn-scenario" data-scenario="convoy">🚗 Konvoy (90 km/h)</button>
+          <button class="btn-scenario" data-scenario="drag_race">⚡ 0-100 Test</button>
+          <button class="btn-scenario" data-scenario="idle">🅿️ Park</button>
+        </div>
+      </div>
+
+      <!-- 30 Vehicles Grid -->
+      <div class="vehicles-grid" id="fleetGrid" style="max-height: 540px;">
+        <!-- Vehicle cards -->
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>
+      J1939 Sinyal Gönderici (Ortam 1) · İzleme Arayüzü: <a href="/" target="_blank">http://localhost:8000/ (Ortam 2)</a>
+    </p>
+  </footer>
+
+  <script src="/static/js/control.js"></script>
+</body>
+</html>

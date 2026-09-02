@@ -1,5 +1,5 @@
 """
-Unit Tests for Fleet Matrix (10 Brands x 3 Models = 30 Vehicles)
+Unit Tests for Fleet Matrix (10 Passenger Brands x 3 Models = 30 Vehicles)
 """
 
 import pytest
@@ -13,7 +13,7 @@ from j1939.fleet_data import (
 
 
 def test_fleet_brands_count_and_structure():
-    """10 Markanın eksiksiz ve doğru veri yapısında olduğunu doğrular"""
+    """10 Binek ve SUV Markasının eksiksiz ve doğru veri yapısında olduğunu doğrular"""
     assert len(FLEET_BRANDS) == 10
 
     brand_ids = set()
@@ -26,8 +26,8 @@ def test_fleet_brands_count_and_structure():
         brand_ids.add(b["id"])
 
     expected_brands = {
-        "mercedes", "scania", "volvo", "man", "daf",
-        "iveco", "ford_trucks", "renault_trucks", "isuzu", "bmc"
+        "bmw", "mercedes", "audi", "volkswagen", "toyota",
+        "tesla", "ford", "renault", "hyundai", "fiat"
     }
     assert brand_ids == expected_brands
 
@@ -60,10 +60,14 @@ def test_unique_source_addresses():
 
 def test_vehicle_lookup_by_id():
     """get_vehicle_by_id fonksiyonunun doğruluğu"""
-    actros = get_vehicle_by_id("mb-actros-1851")
-    assert actros["brand_id"] == "mercedes"
-    assert actros["source_address"] == 0x01
-    assert "Actros" in actros["model"]
+    bmw = get_vehicle_by_id("bmw-320i")
+    assert bmw["brand_id"] == "bmw"
+    assert bmw["source_address"] == 0x01
+    assert "320i" in bmw["model"]
+
+    tesla = get_vehicle_by_id("tesla-model-3-perf")
+    assert tesla["brand_id"] == "tesla"
+    assert "Model 3" in tesla["model"]
 
     with pytest.raises(KeyError):
         get_vehicle_by_id("gecersiz-arac-id")
@@ -72,9 +76,9 @@ def test_vehicle_lookup_by_id():
 def test_vehicle_telemetry_parameters():
     """Tüm araçların hız ve motor parametrelerinin geçerli aralıklarda olduğunu doğrular"""
     for v in get_all_vehicles():
-        assert v["max_speed"] > 50.0
+        assert v["max_speed"] >= 150.0
         assert 0.0 <= v["default_speed"] <= v["max_speed"]
         assert 0.0 <= v["current_speed"] <= v["max_speed"]
-        assert v["acceleration_rate"] > 0.5
+        assert v["acceleration_rate"] > 1.0
         assert len(v["plate"]) > 4
         assert len(v["engine"]) > 3
