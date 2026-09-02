@@ -490,6 +490,35 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // 7.1. Doğrudan Tarayıcıdan Araç Fotoğrafı Yükleme (Web UI File Upload)
+  const carPhotoFileInput = document.getElementById('carPhotoFileInput');
+  if (carPhotoFileInput) {
+    carPhotoFileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch(`/api/vehicle/${selectedVehicleId}/upload-image`, {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          activeVehiclePhotoEl.src = `${data.image_url}?t=${Date.now()}`;
+          alert(`✅ Seçili araç için görsel başarıyla güncellendi!`);
+        } else {
+          alert('❌ Görsel yüklenemedi.');
+        }
+      } catch (err) {
+        console.error('Görsel yükleme hatası:', err);
+        alert('❌ Yükleme sırasında bir hata oluştu.');
+      }
+    });
+  }
+
   // 8. CAN Sniffer
   function processSnifferFrame(frame) {
     canLogList.unshift(frame);

@@ -6,11 +6,12 @@ FastAPI + Uvicorn + WebSockets + Python-CAN Bridge
 import argparse
 import asyncio
 import os
+import shutil
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -188,6 +189,25 @@ async def brake_vehicle(vehicle_id: str, req: BrakeRequest):
     if not success:
         raise HTTPException(status_code=404, detail="Araç bulunamadı")
     return {"status": "ok", "vehicle_id": vehicle_id, "brake_pressed": req.pressed}
+
+
+@app.post("/api/vehicle/{vehicle_id}/upload-image")
+async def upload_vehicle_image(vehicle_id: str, file: UploadFile = File(...)):
+    """Seçili araç için yerel fotoğraf yükleme endpoint'i"""
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+        ext = ".jpg"
+    cars_dir = os.path.join(STATIC_DIR, "images", "cars")
+    os.makedirs(cars_dir, exist_ok=True)
+    dest_path = os.path.join(cars_dir, f"{vehicle_id}{ext}")
+    with open(dest_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {
+        "status": "ok",
+        "vehicle_id": vehicle_id,
+        "image_url": f"/static/images/cars/{vehicle_id}{ext}",
+        "message": f"{vehicle_id} görseli başarıyla güncellendi."
+    }
 
 
 @app.post("/api/fleet/speed")
