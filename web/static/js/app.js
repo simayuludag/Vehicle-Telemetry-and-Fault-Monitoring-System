@@ -1,6 +1,6 @@
 /**
  * J1939 Multi-Signal Fleet Telemetry & Central Controller
- * Signals: Speed (SPN 84), Throttle (SPN 91), Brake (SPN 563), Gear (SPN 523), Battery (SPN 3543/5328)
+ * Features: Live Internet Vehicle Photos, Speed (SPN 84), Throttle (SPN 91), Brake (SPN 563), Gear (SPN 523), Battery (SPN 3543/5328)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -22,8 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM Elemanları
   const fleetGridEl = document.getElementById('fleetGrid');
   const brandFiltersEl = document.getElementById('brandFilters');
-  const activeVehicleTitleEl = document.getElementById('activeVehicleTitle');
-  const activeVehicleDetailsEl = document.getElementById('activeVehicleDetails');
+  const activeVehiclePhotoEl = document.getElementById('activeVehiclePhoto');
+  const showcaseVehicleNameEl = document.getElementById('showcaseVehicleName');
+  const showcaseVehicleSpecsEl = document.getElementById('showcaseVehicleSpecs');
   const activeScopePillEl = document.getElementById('activeScopePill');
   const tabSingleVehicleEl = document.getElementById('tabSingleVehicle');
   const tabFleetModeEl = document.getElementById('tabFleetMode');
@@ -153,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Oluştur
+  // 3. 30 Araçlık Izgarayı (Grid) Fotoğraflarla Oluştur
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -168,14 +169,16 @@ document.addEventListener('DOMContentLoaded', () => {
       card.id = `card-${v.id}`;
       card.dataset.id = v.id;
 
+      const imgUrl = v.image_url || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
+
       card.innerHTML = `
-        <div class="vehicle-card-header">
-          <div class="brand-tag">
-            <span class="brand-color-indicator" style="background:${brand.color}; box-shadow:0 0 8px ${brand.color}"></span>
-            ${v.brand_name}
-          </div>
-          <div class="j1939-sa-tag">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</div>
+        <div class="card-thumb-wrap">
+          <img src="${imgUrl}" class="card-thumb-img" alt="${v.model}" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80'">
+          <div class="card-thumb-overlay"></div>
+          <span class="card-brand-badge-overlay" style="border-left: 3px solid ${brand.color}">${v.brand_name}</span>
+          <span class="card-sa-badge-overlay">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</span>
         </div>
+        
         <div class="vehicle-model-name">${v.model}</div>
         <div class="vehicle-plate">${v.plate} · ${v.category}</div>
         
@@ -187,13 +190,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="status-badge ${v.status}" id="status-badge-${v.id}">${v.status}</div>
         </div>
 
-        <div class="card-signals-pill-row" style="display:flex; gap:6px; margin-top:4px; font-family:'JetBrains Mono', monospace; font-size:0.72rem">
-          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#f59e0b; font-weight:700" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
-          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#10b981" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
-          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#00d2ff" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
+        <div class="card-signals-pill-row" style="display:flex; gap:6px; margin-top:2px; font-family:'JetBrains Mono', monospace; font-size:0.72rem">
+          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#f59e0b; font-weight:700" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
+          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#10b981" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
+          <span style="background:rgba(0,0,0,0.5); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#00d2ff" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
         </div>
 
-        <div class="speed-bar-track" style="height:6px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-top:4px">
+        <div class="speed-bar-track" style="height:5px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-top:3px">
           <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%; height:100%; background:linear-gradient(90deg, #00d2ff, #10b981); border-radius:4px"></div>
         </div>
       `;
@@ -228,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Araç Seçimi & Kokpit HUD Göstergelerini Güncelleme
+  // 5. Araç Seçimi & Kokpit HUD ve Fotoğrafını Güncelleme
   function selectVehicle(vehicleId) {
     selectedVehicleId = vehicleId;
     document.querySelectorAll('.vehicle-card').forEach(c => {
@@ -241,34 +244,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
+    // 1. Araç Fotoğrafını ve Başlığını Güncelle
+    if (activeVehiclePhotoEl) {
+      activeVehiclePhotoEl.src = v.image_url || 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80';
+      activeVehiclePhotoEl.alt = `${v.brand_name} ${v.model}`;
+    }
+    if (showcaseVehicleNameEl) showcaseVehicleNameEl.textContent = `${v.brand_name} ${v.model}`;
+    if (showcaseVehicleSpecsEl) showcaseVehicleSpecsEl.textContent = `${v.plate} · ${v.engine} · SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+
     if (isFleetMode) {
-      activeVehicleTitleEl.textContent = `🌐 TÜM FİLO KONTROLÜ (30 ARAÇ)`;
-      activeVehicleDetailsEl.textContent = `10 Marka Eş Zamanlı Yönetiliyor · Seçili Örnek: ${v.brand_name} ${v.model}`;
-      activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
-      activeScopePillEl.style.borderColor = 'var(--accent-amber)';
-      activeScopePillEl.style.color = 'var(--accent-amber)';
+      if (showcaseVehicleNameEl) showcaseVehicleNameEl.textContent = `🌐 TÜM FİLO (30 ARAÇ) MASTER KONTROLÜ`;
+      activeScopePillEl.textContent = 'MASTER FİLO';
+      activeScopePillEl.style.borderColor = '#f59e0b';
+      activeScopePillEl.style.color = '#f59e0b';
     } else {
-      activeVehicleTitleEl.textContent = `${v.brand_name} ${v.model}`;
-      activeVehicleDetailsEl.textContent = `${v.plate} · ${v.engine} · J1939 SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
-      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
-      activeScopePillEl.style.borderColor = 'var(--accent-cyan)';
-      activeScopePillEl.style.color = 'var(--accent-cyan)';
+      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ';
+      activeScopePillEl.style.borderColor = '#00d2ff';
+      activeScopePillEl.style.color = '#00d2ff';
     }
 
-    // 1. Hız Kadranı
+    // 2. Hız Kadranı
     gauge.setSpeed(v.current_speed, v.max_speed);
 
-    // 2. Gaz Pedalı (SPN 91)
+    // 3. Gaz Pedalı (SPN 91)
     const throttlePct = v.throttle_pct || 0.0;
     if (throttleBarFillEl) throttleBarFillEl.style.height = `${Math.min(100, Math.max(0, throttlePct))}%`;
     if (throttleReadoutEl) throttleReadoutEl.textContent = `%${Math.round(throttlePct)}`;
 
-    // 3. Fren Pedalı (SPN 563 / 521)
+    // 4. Fren Pedalı (SPN 563 / 521)
     const brakePct = v.brake_pct || 0.0;
     if (brakeBarFillEl) brakeBarFillEl.style.height = `${Math.min(100, Math.max(0, brakePct))}%`;
     if (brakeReadoutEl) brakeReadoutEl.textContent = `%${Math.round(brakePct)}`;
 
-    // 4. Modern PRND Vites Göstergesi (SPN 523)
+    // 5. Modern PRND Vites Göstergesi (SPN 523)
     const currentGear = v.gear || "P";
     if (activeGearBigBadgeEl) activeGearBigBadgeEl.textContent = currentGear;
 
@@ -277,20 +285,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prndNEl) prndNEl.classList.toggle('active', currentGear === 'N');
     if (prndDEl) prndDEl.classList.toggle('active', currentGear.startsWith('D') || currentGear === 'D');
 
-    // 5. Batarya SOC / SOH
+    // 6. Batarya SOC / SOH
     const soc = v.battery_soc !== undefined ? v.battery_soc : 95.0;
     const soh = v.battery_soh !== undefined ? v.battery_soh : 99.0;
     if (batterySocTextEl) batterySocTextEl.textContent = `%${soc.toFixed(1)}`;
     if (batterySohTextEl) batterySohTextEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
 
-    // 6. Hız Slider'ı
+    // 7. Hız Slider'ı
     if (speedSliderEl && !speedSliderEl.matches(':active')) {
       speedSliderEl.max = v.max_speed;
       speedSliderEl.value = Math.round(v.target_speed);
       speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
     }
 
-    // 7. J1939 Inspector
+    // 8. J1939 Inspector
     const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
     const priority = 6;
     const pgn = 65265;
@@ -466,7 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 8. Çoklu PGN Destekli CAN Sniffer
+  // 8. CAN Sniffer
   function processSnifferFrame(frame) {
     canLogList.unshift(frame);
     if (canLogList.length > maxSnifferRows) canLogList.pop();
@@ -485,7 +493,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const row = document.createElement('tr');
     
-    // PGN Sınıfı
     let pgnClass = 'ccvs';
     let sigClass = 'speed';
     if (frame.pgn === 61443) { pgnClass = 'eec2'; sigClass = 'throttle'; }

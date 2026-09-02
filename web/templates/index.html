@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>J1939 CAN Bus Çoklu Sinyal & Telemetri Paneli</title>
-  <meta name="description" content="SAE J1939 Standardında 30 Araç İçin Hız, Gaz Pedalı, Fren, Vites ve Batarya Telemetri Paneli (CCVS, EEC2, ETC2, HVS).">
+  <meta name="description" content="SAE J1939 Standardında 30 Araç İçin Hız, Gaz Pedalı, Fren, Vites, Batarya ve Görsel Araç Galerisi (CCVS, EEC2, ETC2, HVS).">
   
-  <link rel="stylesheet" href="/static/css/style.css?v=3.5">
+  <link rel="stylesheet" href="/static/css/style.css?v=4.0">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   
-  <!-- KRİTİK GÖRSEL STİLLER (TARAYICI ÖNBELLEĞİNDEN BAĞIMSIZ GARANTİ STİLLEME) -->
+  <!-- KRİTİK GÖRSEL STİLLER (ARAÇ FOTOĞRAFLARI & KOKPİT HUD) -->
   <style>
-    /* 30 Araçlık Sol Panel Izgarası ve Kart Boyutları */
+    /* Sol Panel 30 Araç Izgarası */
     .vehicles-grid {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
@@ -25,14 +25,14 @@
       background: rgba(19, 27, 42, 0.85) !important;
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
       border-radius: 12px !important;
-      padding: 14px !important;
+      padding: 12px !important;
       cursor: pointer !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 6px !important;
-      min-height: 120px !important;
       transition: all 0.2s ease !important;
-      box-sizing: border-box !important;
+      position: relative !important;
+      overflow: hidden !important;
     }
 
     .vehicle-card:hover {
@@ -47,41 +47,109 @@
       background: rgba(0, 210, 255, 0.09) !important;
     }
 
-    .vehicle-card-header {
+    .card-thumb-wrap {
+      width: 100% !important;
+      height: 95px !important;
+      border-radius: 8px !important;
+      overflow: hidden !important;
+      position: relative !important;
+      margin-bottom: 4px !important;
+    }
+
+    .card-thumb-img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      transition: transform 0.3s ease !important;
+    }
+
+    .vehicle-card:hover .card-thumb-img {
+      transform: scale(1.05) !important;
+    }
+
+    .card-thumb-overlay {
+      position: absolute !important;
+      inset: 0 !important;
+      background: linear-gradient(180deg, transparent 40%, rgba(7, 9, 14, 0.9) 100%) !important;
+    }
+
+    .card-brand-badge-overlay {
+      position: absolute !important;
+      top: 6px !important;
+      left: 6px !important;
+      font-size: 0.68rem !important;
+      font-weight: 700 !important;
+      background: rgba(0,0,0,0.65) !important;
+      padding: 2px 8px !important;
+      border-radius: 4px !important;
+      backdrop-filter: blur(4px) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,0.15) !important;
+    }
+
+    .card-sa-badge-overlay {
+      position: absolute !important;
+      top: 6px !important;
+      right: 6px !important;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 0.68rem !important;
+      background: rgba(0,0,0,0.7) !important;
+      color: #00d2ff !important;
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+    }
+
+    /* KOKPİT: BÜYÜK ARAÇ FOTOĞRAF VİTRİNİ */
+    .active-vehicle-showcase-card {
+      width: 100% !important;
+      height: 180px !important;
+      border-radius: 12px !important;
+      overflow: hidden !important;
+      position: relative !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      margin-bottom: 14px !important;
+      background: #000 !important;
+    }
+
+    .active-vehicle-showcase-img {
+      width: 100% !important;
+      height: 180px !important;
+      object-fit: cover !important;
+      object-position: center !important;
+      transition: opacity 0.3s ease !important;
+    }
+
+    .showcase-gradient-overlay {
+      position: absolute !important;
+      inset: 0 !important;
+      background: linear-gradient(180deg, rgba(7, 9, 14, 0.2) 0%, rgba(7, 9, 14, 0.85) 100%) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-end !important;
+      padding: 14px 18px !important;
+    }
+
+    .showcase-title-row {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
-      width: 100% !important;
     }
 
-    .vehicle-model-name {
-      font-size: 0.96rem !important;
+    .showcase-vehicle-name {
+      font-family: 'Chakra Petch', sans-serif !important;
+      font-size: 1.35rem !important;
       font-weight: 700 !important;
-      color: #f0f4fc !important;
-      margin-top: 2px !important;
+      color: #fff !important;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8) !important;
     }
 
-    .vehicle-plate {
+    .showcase-vehicle-specs {
       font-family: 'JetBrains Mono', monospace !important;
-      font-size: 0.75rem !important;
+      font-size: 0.78rem !important;
       color: #94a3b8 !important;
     }
 
-    .vehicle-speed-row {
-      display: flex !important;
-      align-items: baseline !important;
-      justify-content: space-between !important;
-      margin-top: 4px !important;
-    }
-
-    .speed-digital-display {
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-size: 1.6rem !important;
-      font-weight: 700 !important;
-      color: #f0f4fc !important;
-    }
-
-    /* KOKPİT HUD: YATAY VE DERLİ TOPLU VİTES & BATARYA PANELİ */
+    /* HUD CENTER */
     .cockpit-hud-center {
       width: 100% !important;
       display: flex !important;
@@ -129,7 +197,6 @@
       gap: 8px !important;
     }
 
-    /* GERÇEKÇİ OTOMOTİV VİTES GÖSTERGESİ (PRND + DİJİTAL VİTES KUTUSU) */
     .real-gearbox-container {
       display: flex !important;
       align-items: center !important;
@@ -221,7 +288,7 @@
           J1939 Çoklu Sinyal Telemetri & Kontrol Paneli
           <span class="j1939-pill">SAE J1939 · CCVS · EEC2 · ETC2 · HVS</span>
         </h1>
-        <p>10 Popüler Marka · 30 Model Hız, Gaz, Fren, Vites ve Batarya Telemetrisi</p>
+        <p>10 Popüler Marka · 30 Model Hız, Gaz, Fren, Vites, Batarya ve Canlı Görseller</p>
       </div>
     </div>
 
@@ -253,15 +320,15 @@
   <!-- MAIN WORKSPACE -->
   <main class="main-container">
 
-    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID (CLEAN & DETAILED CARDS) -->
+    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID WITH PHOTO THUMBNAILS -->
     <section class="panel-card">
       <div class="panel-header">
         <div class="panel-header-title">
-          <h2>🚗 Araç Filosu (30 Popüler Model)</h2>
+          <h2>🚗 Araç Filosu (30 Model)</h2>
           <span class="badge-counter">10 Marka</span>
         </div>
         <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-muted)">
-          Detay ve kontrol için araca tıklayın
+          Fotoğrafını ve telemetrisini görmek için araca tıklayın
         </div>
       </div>
 
@@ -272,23 +339,28 @@
 
       <!-- 30 Vehicles Grid List -->
       <div class="vehicles-grid" id="fleetGrid">
-        <!-- Dynamically populated vehicle cards -->
+        <!-- Dynamically populated vehicle cards with thumbnails -->
       </div>
     </section>
 
     <!-- RIGHT COLUMN: MULTI-SIGNAL COCKPIT HUD & CAN SNIFFER -->
     <section class="cockpit-column">
 
-      <!-- 1. MULTI-SIGNAL COCKPIT HUD (SPEED, THROTTLE, BRAKE, GEAR, BATTERY) -->
+      <!-- 1. MULTI-SIGNAL COCKPIT HUD (IMAGE SHOWCASE, SPEED, THROTTLE, BRAKE, GEAR, BATTERY) -->
       <div class="cockpit-card">
         
-        <!-- Active Vehicle Info Banner -->
-        <div class="active-vehicle-info-banner">
-          <div>
-            <div class="title" id="activeVehicleTitle">BMW 320i Sedan M Sport</div>
-            <div class="details" id="activeVehicleDetails">34 BMW 320 · 2.0L TwinPower Turbo 170 HP · J1939 SA: 0x01</div>
+        <!-- Large Vehicle Visual Showcase Card -->
+        <div class="active-vehicle-showcase-card">
+          <img id="activeVehiclePhoto" src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=800&q=80" alt="Araç Görseli" class="active-vehicle-showcase-img">
+          <div class="showcase-gradient-overlay">
+            <div class="showcase-title-row">
+              <div>
+                <div class="showcase-vehicle-name" id="showcaseVehicleName">BMW 320i Sedan M Sport</div>
+                <div class="showcase-vehicle-specs" id="showcaseVehicleSpecs">34 BMW 320 · 2.0L TwinPower Turbo 170 HP · SA: 0x01</div>
+              </div>
+              <div class="j1939-pill" id="activeScopePill">SEÇİLİ ARAÇ</div>
+            </div>
           </div>
-          <div class="j1939-pill" id="activeScopePill">SEÇİLİ ARAÇ KONTROLÜ</div>
         </div>
 
         <!-- Cockpit HUD Center: Vertical Throttle Bar + Speedometer Canvas Gauge + Vertical Brake Bar -->
@@ -507,7 +579,7 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="/static/js/gauge.js?v=3.5"></script>
-  <script src="/static/js/app.js?v=3.5"></script>
+  <script src="/static/js/gauge.js?v=4.0"></script>
+  <script src="/static/js/app.js?v=4.0"></script>
 </body>
 </html>
