@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const throttleReadoutEl = document.getElementById('throttleReadout');
   const brakeBarFillEl = document.getElementById('brakeBarFill');
   const brakeReadoutEl = document.getElementById('brakeReadout');
+  const activeGearBigBadgeEl = document.getElementById('activeGearBigBadge');
+  const prndPEl = document.getElementById('prnd-P');
+  const prndREl = document.getElementById('prnd-R');
+  const prndNEl = document.getElementById('prnd-N');
+  const prndDEl = document.getElementById('prnd-D');
   const batterySocTextEl = document.getElementById('batterySocText');
   const batterySohTextEl = document.getElementById('batterySohText');
 
@@ -177,19 +182,19 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="vehicle-speed-row">
           <div class="speed-digital-display">
             <span class="speed-num" id="speed-num-${v.id}">${Math.round(v.current_speed)}</span>
-            <span class="unit">KM/H</span>
+            <span class="unit" style="font-size:0.75rem; color:#00d2ff; font-family:'JetBrains Mono', monospace">KM/H</span>
           </div>
           <div class="status-badge ${v.status}" id="status-badge-${v.id}">${v.status}</div>
         </div>
 
-        <div class="card-signals-pill-row">
-          <span class="card-signal-badge gear" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
-          <span class="card-signal-badge battery" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
-          <span class="card-signal-badge" id="badge-throttle-${v.id}" style="color:var(--accent-cyan)">⚡ %${Math.round(v.throttle_pct || 0)}</span>
+        <div class="card-signals-pill-row" style="display:flex; gap:6px; margin-top:4px; font-family:'JetBrains Mono', monospace; font-size:0.72rem">
+          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#f59e0b; font-weight:700" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
+          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#10b981" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
+          <span style="background:rgba(0,0,0,0.4); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.08); color:#00d2ff" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
         </div>
 
-        <div class="speed-bar-track">
-          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%"></div>
+        <div class="speed-bar-track" style="height:6px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; margin-top:4px">
+          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%; height:100%; background:linear-gradient(90deg, #00d2ff, #10b981); border-radius:4px"></div>
         </div>
       `;
 
@@ -201,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Canlı Veri Akışında Sayıları ve Kart Sinyallerini Güncelle
+  // 4. Canlı Veri Akışında Sayıları Güncelle
   function updateFleetGridRealtime() {
     fleet.forEach(v => {
       const numEl = document.getElementById(`speed-num-${v.id}`);
@@ -250,57 +255,53 @@ document.addEventListener('DOMContentLoaded', () => {
       activeScopePillEl.style.color = 'var(--accent-cyan)';
     }
 
-    // 1. Hız Kadranını Güncelle
+    // 1. Hız Kadranı
     gauge.setSpeed(v.current_speed, v.max_speed);
 
-    // 2. Gaz Pedalı Açıklığı (SPN 91)
+    // 2. Gaz Pedalı (SPN 91)
     const throttlePct = v.throttle_pct || 0.0;
-    throttleBarFillEl.style.height = `${Math.min(100, Math.max(0, throttlePct))}%`;
-    throttleReadoutEl.textContent = `%${Math.round(throttlePct)}`;
+    if (throttleBarFillEl) throttleBarFillEl.style.height = `${Math.min(100, Math.max(0, throttlePct))}%`;
+    if (throttleReadoutEl) throttleReadoutEl.textContent = `%${Math.round(throttlePct)}`;
 
-    // 3. Fren Pedalı Basıncı (SPN 563 / 521)
+    // 3. Fren Pedalı (SPN 563 / 521)
     const brakePct = v.brake_pct || 0.0;
-    brakeBarFillEl.style.height = `${Math.min(100, Math.max(0, brakePct))}%`;
-    brakeReadoutEl.textContent = `%${Math.round(brakePct)}`;
+    if (brakeBarFillEl) brakeBarFillEl.style.height = `${Math.min(100, Math.max(0, brakePct))}%`;
+    if (brakeReadoutEl) brakeReadoutEl.textContent = `%${Math.round(brakePct)}`;
 
-    // 4. Vites Durumu (SPN 523 - ETC2)
-    const currentGear = v.gear || "D1";
-    document.querySelectorAll('.gear-slot').forEach(slot => {
-      slot.classList.remove('active');
-    });
-    const activeGearSlot = document.getElementById(`gear-${currentGear}`);
-    if (activeGearSlot) {
-      activeGearSlot.classList.add('active');
-    } else if (currentGear.startsWith('D')) {
-      const dSlot = document.getElementById('gear-D1');
-      if (dSlot) dSlot.classList.add('active');
-    }
+    // 4. Modern PRND Vites Göstergesi (SPN 523)
+    const currentGear = v.gear || "P";
+    if (activeGearBigBadgeEl) activeGearBigBadgeEl.textContent = currentGear;
 
-    // 5. Batarya SOC / SOH (SPN 3543 & SPN 5328 - HVS)
+    if (prndPEl) prndPEl.classList.toggle('active', currentGear === 'P');
+    if (prndREl) prndREl.classList.toggle('active', currentGear === 'R');
+    if (prndNEl) prndNEl.classList.toggle('active', currentGear === 'N');
+    if (prndDEl) prndDEl.classList.toggle('active', currentGear.startsWith('D') || currentGear === 'D');
+
+    // 5. Batarya SOC / SOH
     const soc = v.battery_soc !== undefined ? v.battery_soc : 95.0;
     const soh = v.battery_soh !== undefined ? v.battery_soh : 99.0;
-    batterySocTextEl.textContent = `%${soc.toFixed(1)}`;
-    batterySohTextEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
+    if (batterySocTextEl) batterySocTextEl.textContent = `%${soc.toFixed(1)}`;
+    if (batterySohTextEl) batterySohTextEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
 
-    // 6. Hız Slider'ı Güncelle
+    // 6. Hız Slider'ı
     if (speedSliderEl && !speedSliderEl.matches(':active')) {
       speedSliderEl.max = v.max_speed;
       speedSliderEl.value = Math.round(v.target_speed);
       speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
     }
 
-    // 7. J1939 Inspector'ı Güncelle
+    // 7. J1939 Inspector
     const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
     const priority = 6;
     const pgn = 65265;
     const canId = (priority << 26) | (pgn << 8) | v.source_address;
     const canIdHex = `0x${canId.toString(16).toUpperCase().padStart(8, '0')}`;
 
-    inspPgnBadgeEl.textContent = 'PGN 65265 (CCVS1) & 61443 (EEC2)';
-    inspCanIdEl.textContent = canIdHex;
-    inspPgnEl.textContent = '0xFEF1 (CCVS1)';
-    inspPriorityEl.textContent = `${priority} (Normal)`;
-    inspSaEl.textContent = saHex;
+    if (inspPgnBadgeEl) inspPgnBadgeEl.textContent = 'PGN 65265 (CCVS1) & 61443 (EEC2)';
+    if (inspCanIdEl) inspCanIdEl.textContent = canIdHex;
+    if (inspPgnEl) inspPgnEl.textContent = '0xFEF1 (CCVS1)';
+    if (inspPriorityEl) inspPriorityEl.textContent = `${priority} (Normal)`;
+    if (inspSaEl) inspSaEl.textContent = saHex;
 
     const rawSpeed = Math.round(v.current_speed * 256);
     const b1 = rawSpeed & 0xFF;
@@ -308,25 +309,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const b4 = v.brake_pressed ? 0xFD : 0xFC;
     const bytes = [0xFC, b1, b2, 0xFF, b4, 0xFF, 0xFF, 0xFF];
 
-    hexBytesRowEl.innerHTML = '';
-    bytes.forEach((b, idx) => {
-      const isSpeedByte = (idx === 1 || idx === 2);
-      const isBrakeByte = (idx === 4);
-      const div = document.createElement('div');
-      div.className = `hex-byte-block ${(isSpeedByte || isBrakeByte) ? 'highlight' : ''}`;
-      div.innerHTML = `
-        <span class="idx">B${idx}</span>
-        <span class="val">${b.toString(16).toUpperCase().padStart(2, '0')}</span>
-      `;
-      hexBytesRowEl.appendChild(div);
-    });
+    if (hexBytesRowEl) {
+      hexBytesRowEl.innerHTML = '';
+      bytes.forEach((b, idx) => {
+        const isSpeedByte = (idx === 1 || idx === 2);
+        const isBrakeByte = (idx === 4);
+        const div = document.createElement('div');
+        div.className = `hex-byte-block ${(isSpeedByte || isBrakeByte) ? 'highlight' : ''}`;
+        div.innerHTML = `
+          <span class="idx">B${idx}</span>
+          <span class="val">${b.toString(16).toUpperCase().padStart(2, '0')}</span>
+        `;
+        hexBytesRowEl.appendChild(div);
+      });
+    }
 
-    spnFormulaHintEl.innerHTML = `
-      SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
-      SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
-      SPN 523 Vites = <strong>${currentGear}</strong> | 
-      SPN 3543 Batarya = <strong>%${soc.toFixed(1)}</strong>
-    `;
+    if (spnFormulaHintEl) {
+      spnFormulaHintEl.innerHTML = `
+        SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+        SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
+        SPN 523 Vites = <strong>${currentGear}</strong> | 
+        SPN 3543 Batarya = <strong>%${soc.toFixed(1)}</strong>
+      `;
+    }
   }
 
   // 6. Komut Gönderme Fonksiyonları
