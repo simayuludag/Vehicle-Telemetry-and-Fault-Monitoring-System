@@ -360,3 +360,60 @@ CM_ BO_ 768 "Arıza ve teşhis durum mesaji (0x300)";
 
 VAL_ 512 Ignition 0 "OFF" 1 "ACC" 2 "ON" 3 "START" ;
 ```
+---
+
+## 📅 Day 7 - J1939 DBC Entegrasyonu, PCAN Donanım Haberleşmesi ve Taşınabilir Çalışma Ortamı
+
+### 🔍 1. Araştırılan Konular
+
+* **PCAN-View vs. DBC Sembol Ayrıştırma:**
+  * PCAN-View aracının yalnızca ham CAN paketlerini (ID, DLC, Raw Data) görüntüleyebildiği, sinyal çözümleme (decode) desteği sunmadığı analiz edildi.
+* **J1939 Protokolü ve Mesaj/Sinyal Yapısı:**
+  * J1939 standardına ait 29-bit Extended CAN Identifier mimarisi.
+  * Vector CANdb++ ile oluşturulan `my_j1939_dbc.dbc` veri tabanındaki `CCVS1` ve `ACC1_2A` mesajlarının sinyal yerleşimleri (Startbit, Length, Byte Order, Factor/Offset).
+* **Python CAN Ekosistemi:**
+  * `cantools` ile fiziksel sinyal değerlerinin otomatik ölçeklenerek 8 baytlık ham veriye dönüştürülmesi (encode) ve tersi işlemle çözümlenmesi (decode).
+  * `python-can` kütüphanesinin `interface='pcan'` arka ucunda donanım sürücüsü olarak `PCANBasic.dll` bağımlılığıyla çalışma prensibi.
+* **Taşınabilir Çalışma Mimarisi (Portability):**
+  * Projenin farklı geliştirici makinelerinde harici sürücü veya bağımlılık çakışması yaşamadan sıfır kurulumla çalışabilmesi için sanal ortam (`venv`) ve dinamik dosya yolu yönetimi.
+
+---
+
+### ✅ 2. Tamamlanan Görevler & Yapılanlar
+
+- [x] **J1939 DBC Entegrasyonu:**
+  * `CCVS1` (`0x18FEF100`) mesajı: `WheelBasedVehicleSpeed`, `CruiseControlActive`, `CruiseControlSetSpeed`, `ParkingBrakeSwitch` ve ilgili anahtar sinyalleri eklendi.
+  * `ACC1_2A` mesajı: `SpeedOfForwardVehicle`, `DistanceToForwardVehicle`, `AdaptiveCruiseCtrlMode`, `RoadCurvature` ve çarpışma uyarı sinyalleri tanımlandı.
+- [x] **CAN Veri İletimi ve Canlı İzleme Betikleri:**
+  * `can_sender.py`: DBC formatına göre sinyalleri paketleyip fiziksel PCAN adaptörü üzerinden periyodik (100 ms) ileten kod geliştirildi.
+  * `can_receiver.py`: Gelen mesajları hatta yakalayıp DBC kurallarına göre decode eden ve terminalde sinyal isimleri ile fiziksel birimlerini canlı yazdıran alıcı oluşturuldu.
+- [x] **Taşınabilir Ortam & Otomasyon:**
+  * Sistem bağımsızlığı sağlamak adına `PCANBasic.dll` yerel dizine dahil edildi.
+  * Proje içi bağımlılıkları yönetmek için `requirements.txt` (`python-can`, `cantools`) yapılandırıldı.
+  * Tek tıkla sanal ortamı kurup çalıştıran başlatıcı otomasyonları (`run_sender.bat`, `run_monitor.bat`) hazırlandı.
+- [x] **Hata Çözümü:**
+  * PowerShell üzerinde çok satırlı komut yapıştırma kaynaklı sanal ortam kesinti hatası (`KeyboardInterrupt`) giderildi, adımlar izole şekilde tamamlandı.
+  ---
+  ```
+
+## 📅 Day 8 - CI/CD Süreçleri, GitHub Actions & Ortam Yönetimi
+
+### 🔬 1. Araştırılan Konular
+
+* **CI/CD Mimarisi ve GitHub Actions:**
+  * Sürekli Entegrasyon (CI) ve Sürekli Dağıtım (CD) prensipleri; kod testlerinin ve derleme süreçlerinin otomasyonu.
+  * Temel bileşenler: `Workflow` (.yml dosyası), `Event` (push/pull_request tetikleyicileri), `Job`, `Step` ve sanal çalışma makineleri (`Runner`).
+* **Otomasyon Test Entegrasyonu:**
+  * Projeye push atıldığında izole bir sanal makinede (Ubuntu) Python ortamının kurulması, bağımlılıkların (`requirements.txt`) yüklenmesi ve `pytest` testlerinin insan müdahalesi olmadan otomatik koşulması.
+* **Terminal & Dizin Yönetimi:**
+  * Linux/Git Bash komutlarında güvenli dizin temizleme (`rm -rf` vs. `rmdir`) dinamikleri ve SSH protokolü ile depo senkronizasyonu.
+
+---
+
+### 💻 2. Tamamlanan Görevler & Yapılanlar
+
+- [x] **CI/CD Pipeline Yapılandırması:** Proje ana dizininde `.github/workflows/` yapısı kurgulandı ve test otomasyonunu sağlayan YAML iş akış dosyası hazırlandı.
+- [x] **Dizin & Depo Temizliği:** Boş olmayan yerel proje dizini `rm -rf` komutu ile temizlendi; GitHub üzerindeki güncel depo SSH anahtarı ile yerel makineye yeniden klonlandı (`git clone`).
+- [x] **Birim Test Otomasyonu:** Sanal CAN modülleri ve durum kontrolleri için yazılan testlerin her push işleminde GitHub Actions üzerinde çalışması doğrulandı.
+- [x] **Geliştirme Ortamı Senkronizasyonu:** VS Code üzerinde sanal ortam (`venv`), test arayüzü ve terminal araçları entegre hale getirildi.
+```

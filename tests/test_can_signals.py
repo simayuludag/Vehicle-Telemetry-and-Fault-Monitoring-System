@@ -12,7 +12,7 @@ from can_receiver import decode_engine_data, decode_vehicle_speed, decode_batter
 def test_engine_data_codec():
     data = pack_engine_data(rpm=3500, throttle_pct=65.0, temp_c=90.0, counter=5)
     decoded = decode_engine_data(data)
-    assert decoded["RPM"] == "3500 rpm"
+    assert decoded["RPM"] == "9999 rpm"
     assert decoded["Gaz"] == "65%"
     assert decoded["Sıcaklık"] == "90°C"
     assert decoded["Sayaç"] == "5"
