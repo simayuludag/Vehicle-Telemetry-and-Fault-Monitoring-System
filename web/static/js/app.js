@@ -1,6 +1,6 @@
 /**
  * J1939 Multi-Signal Fleet Telemetry & Central Controller
- * Features: 30 Distinct Local Vehicle Visuals, Speed (SPN 84), Throttle (SPN 91), Brake (SPN 563), Gear (SPN 523), Battery (SPN 3543/5328)
+ * Auto-resolves user-provided images: .jpg -> .png -> .webp -> .svg
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -67,6 +67,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Gauge Başlat
   gauge = new window.SpeedGauge('speedGaugeCanvas');
+
+  // Akıllı Görsel Yükleyici (.jpg -> .png -> .webp -> .svg)
+  function setCarImage(imgElement, vehicleId) {
+    const exts = ['.jpg', '.png', '.webp', '.jpeg', '.svg'];
+    let currentExtIdx = 0;
+
+    function tryNext() {
+      if (currentExtIdx < exts.length) {
+        const ext = exts[currentExtIdx++];
+        imgElement.src = `/static/images/cars/${vehicleId}${ext}?t=${Date.now()}`;
+      }
+    }
+
+    imgElement.onerror = () => {
+      tryNext();
+    };
+
+    tryNext();
+  }
 
   // 1. WebSocket Bağlantısını Başlat
   function initWebSocket() {
@@ -152,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Oluştur (Garantili & Geniş Kartlar)
+  // 3. 30 Araçlık Izgarayı (Grid) Oluştur
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -229,21 +248,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 5. Araç Seçimi & Kokpit HUD ve Fotoğrafını Güncelleme
+  let lastLoadedVehicleId = null;
+
   function selectVehicle(vehicleId) {
     selectedVehicleId = vehicleId;
     document.querySelectorAll('.vehicle-card').forEach(c => {
       c.classList.toggle('selected', c.dataset.id === vehicleId);
     });
-    updateSelectedVehicleView();
+    updateSelectedVehicleView(true);
   }
 
-  function updateSelectedVehicleView() {
+  function updateSelectedVehicleView(forceImageUpdate = false) {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    // 1. Seçili Aracın Özel Görsel Kartını Yükle (30 Ayrı Görsel)
-    if (activeVehiclePhotoEl) {
-      activeVehiclePhotoEl.src = `/static/images/cars/${v.id}.svg`;
+    // 1. Seçili Aracın Görselini Yükle (.jpg, .png, .webp, .svg otomatik desteklenir)
+    if (activeVehiclePhotoEl && (forceImageUpdate || lastLoadedVehicleId !== v.id)) {
+      lastLoadedVehicleId = v.id;
+      setCarImage(activeVehiclePhotoEl, v.id);
       activeVehiclePhotoEl.alt = `${v.brand_name} ${v.model}`;
     }
 
@@ -413,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabSingleVehicleEl.classList.add('active');
     tabFleetModeEl.classList.remove('active');
     sliderLabelEl.textContent = 'Hedef Hız:';
-    updateSelectedVehicleView();
+    updateSelectedVehicleView(true);
   });
 
   tabFleetModeEl.addEventListener('click', () => {
@@ -421,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabFleetModeEl.classList.add('active');
     tabSingleVehicleEl.classList.remove('active');
     sliderLabelEl.textContent = 'Filo Hedef Hızı:';
-    updateSelectedVehicleView();
+    updateSelectedVehicleView(true);
   });
 
   speedSliderEl.addEventListener('input', (e) => {
