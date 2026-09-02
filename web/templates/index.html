@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J1939 CAN Bus Telemetri & Filo İzleme Ekranı (Monitor)</title>
-  <meta name="description" content="SAE J1939 Standardında 30 Binek ve SUV Araç İçin Canlı Telemetri ve Hız İzleme Ekranı (PGN 65265, SPN 84).">
+  <title>J1939 CAN Bus Telemetri & Canlı Hız İzleme Ekranı</title>
+  <meta name="description" content="SAE J1939 Standardında 30 Binek ve SUV Araç İçin Canlı Telemetri, Hız Kontrolü ve İzleme Ekranı (PGN 65265, SPN 84).">
   
   <link rel="stylesheet" href="/static/css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   <style>
     .btn-nav-control {
       background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
       color: white;
       font-family: var(--font-tech);
       font-weight: 700;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: var(--radius-md);
       text-decoration: none;
       display: flex;
@@ -22,6 +22,7 @@
       gap: 8px;
       transition: var(--transition-smooth);
       box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+      font-size: 0.85rem;
     }
     .btn-nav-control:hover {
       box-shadow: 0 0 25px rgba(245, 158, 11, 0.5);
@@ -34,13 +35,13 @@
   <!-- TOPBAR / STATUS HEADER -->
   <header class="topbar">
     <div class="brand-section">
-      <div class="logo-badge">RX</div>
+      <div class="logo-badge">J19</div>
       <div class="brand-title">
         <h1>
-          J1939 Telemetri & İzleme Arayüzü 
-          <span class="j1939-pill">ORTAM 2: MONITOR / RECEIVER</span>
+          J1939 Telemetri & Hız İzleme Paneli
+          <span class="j1939-pill">SAE J1939 · PGN 65265 · SPN 84</span>
         </h1>
-        <p>10 Popüler Marka · 30 Model Canlı Hız ve 29-Bit CAN Sinyal İzleyici (PGN 65265, SPN 84)</p>
+        <p>10 Popüler Marka · 30 Model Canlı Hız Kontrolü ve 29-Bit CAN Sinyal İzleyici</p>
       </div>
     </div>
 
@@ -52,7 +53,7 @@
         <span class="val" id="wsStatusText">BAĞLANIYOR...</span>
       </div>
       <div class="metric-pill">
-        <span class="label">GELEN PAKET:</span>
+        <span class="label">MESAJ SAYACI:</span>
         <span class="val" id="totalFramesCounter">0</span>
       </div>
       <div class="metric-pill">
@@ -63,24 +64,31 @@
 
     <!-- Header Actions -->
     <div class="header-actions">
-      <a href="/control" class="btn-nav-control" title="Hız Verme / Gönderici Paneline Git">
-        🕹️ HIZ VERME PANELİ (KONTROL) ↗
+      <a href="/control" target="_blank" class="btn-nav-control" title="Ayrı Kontrol Sekmesi Aç">
+        🕹️ AYRI KONTROL SEKMESİ ↗
       </a>
+      <button class="btn-emergency-stop" id="btnEmergencyStop" title="Tüm Filoyu Kademeli Durdur">
+        🛑 TÜMÜNÜ DURDUR
+      </button>
     </div>
   </header>
 
   <!-- MAIN WORKSPACE -->
   <main class="main-container">
 
-    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID & LIVE TELEMETRY STATUS -->
+    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID -->
     <section class="panel-card">
       <div class="panel-header">
         <div class="panel-header-title">
-          <h2>🚗 Araç Filosu İzleme (30 Popüler Model)</h2>
-          <span class="badge-counter">10 Marka / Canlı Telemetri</span>
+          <h2>🚗 Araç Filosu (30 Popüler Model)</h2>
+          <span class="badge-counter">10 Marka</span>
         </div>
-        <div style="font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted)">
-          İzlemek için araca tıklayın
+
+        <!-- Master Speed Slider for All Vehicles -->
+        <div class="master-speed-control">
+          <label for="masterSpeedSlider">Filo Hızı:</label>
+          <input type="range" id="masterSpeedSlider" min="0" max="250" value="90">
+          <span id="masterSpeedVal" style="font-family:var(--font-mono); font-size:0.8rem; font-weight:700; color:var(--accent-cyan)">90 KM/H</span>
         </div>
       </div>
 
@@ -89,16 +97,29 @@
         <!-- Dynamically populated with 10 brands -->
       </div>
 
-      <!-- 30 Vehicles Grid List (Pure Monitoring View) -->
-      <div class="vehicles-grid" id="fleetGrid" style="max-height: 700px;">
-        <!-- Dynamically populated vehicle cards -->
+      <!-- Fleet Scenario Controls Bar -->
+      <div class="fleet-scenarios-bar">
+        <div class="scenario-btns">
+          <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Senaryolar:</span>
+          <button class="btn-scenario active" data-scenario="normal">🚦 Normal</button>
+          <button class="btn-scenario" data-scenario="highway">🛣️ Otoyol (120 km/h)</button>
+          <button class="btn-scenario" data-scenario="city">🏙️ Şehir İçi (50 km/h)</button>
+          <button class="btn-scenario" data-scenario="convoy">🚗 Konvoy (90 km/h)</button>
+          <button class="btn-scenario" data-scenario="drag_race">⚡ 0-100 Test</button>
+          <button class="btn-scenario" data-scenario="idle">🅿️ Park (0 km/h)</button>
+        </div>
+      </div>
+
+      <!-- 30 Vehicles Grid List -->
+      <div class="vehicles-grid" id="fleetGrid">
+        <!-- Dynamically populated vehicle cards with speed gauges & controls -->
       </div>
     </section>
 
-    <!-- RIGHT COLUMN: COCKPIT SPEEDOMETER, J1939 INSPECTOR & CAN SNIFFER -->
+    <!-- RIGHT COLUMN: COCKPIT SPEEDOMETER, SPEED CONTROLS, J1939 INSPECTOR & CAN SNIFFER -->
     <section class="cockpit-column">
 
-      <!-- 1. VEHICLE COCKPIT SPEEDOMETER -->
+      <!-- 1. VEHICLE COCKPIT SPEEDOMETER & DIRECT CONTROLS -->
       <div class="cockpit-card">
         <div class="active-vehicle-info-banner">
           <div>
@@ -113,11 +134,37 @@
           <canvas id="speedGaugeCanvas" width="320" height="220"></canvas>
         </div>
 
-        <!-- Telemetry Status Bar -->
-        <div style="width:100%; display:flex; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px 16px; border-radius:var(--radius-md); border:1px solid var(--border-subtle); font-family:var(--font-mono); font-size:0.8rem;">
-          <div><span style="color:var(--text-muted)">DURUM:</span> <span id="telemetryStatusVal" style="color:var(--accent-emerald); font-weight:700;">CRUISING</span></div>
-          <div><span style="color:var(--text-muted)">MAKS HIZ:</span> <span id="telemetryMaxSpeedVal" style="color:var(--text-primary); font-weight:700;">235 km/h</span></div>
-          <div><span style="color:var(--text-muted)">J1939 SA:</span> <span id="telemetrySaVal" style="color:var(--accent-purple); font-weight:700;">0x01</span></div>
+        <!-- Interactive Cockpit Speed Controls -->
+        <div class="cockpit-controls">
+          <div class="speed-slider-row">
+            <label for="speedSlider">Hedef Hız:</label>
+            <input type="range" id="speedSlider" min="0" max="250" value="110">
+            <span class="slider-val-tag" id="speedSliderVal">110 KM/H</span>
+          </div>
+
+          <!-- Speed Presets -->
+          <div class="speed-preset-buttons">
+            <button class="btn-preset" data-speed="0">0 (Dur)</button>
+            <button class="btn-preset" data-speed="50">50 km/h</button>
+            <button class="btn-preset" data-speed="90">90 km/h</button>
+            <button class="btn-preset" data-speed="120">120 km/h</button>
+            <button class="btn-preset" data-speed="150">150 km/h</button>
+            <button class="btn-preset" data-speed="180">180 km/h</button>
+            <button class="btn-preset" data-speed="220">220 km/h</button>
+          </div>
+
+          <!-- Smooth Pedal Controls -->
+          <div class="pedal-controls-row">
+            <button class="btn-pedal accelerate" id="btnThrottle" title="Hızı kademeli olarak 10 km/h artırır">
+              ⚡ HIZ VER (+10 KM/H)
+            </button>
+            <button class="btn-pedal brake-gradual" id="btnBrakeGradual" title="Hızı kademeli olarak 15 km/h azaltır">
+              🛑 FREN YAP (-15 KM/H)
+            </button>
+            <button class="btn-pedal brake-full" id="btnBrakeFull" title="Aracı durmaya doğru yavaşlatır">
+              🛑 TAM DUR (0)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -204,7 +251,7 @@
   <!-- FOOTER -->
   <footer class="footer">
     <p>
-      SAE J1939 Araç Hız İzleme Ekranı (Ortam 2) · Hız vermek için: <a href="/control">Hız Verme Paneli (Ortam 1)</a> veya Terminalden: <code>python j1939_sender.py</code>
+      SAE J1939 Araç Hız İzleme & Kontrol Platformu · 10 Popüler Marka (BMW, Mercedes-Benz, Audi, Volkswagen, Toyota, Tesla, Ford, Renault, Hyundai, Fiat) · 30 Model
     </p>
   </footer>
 

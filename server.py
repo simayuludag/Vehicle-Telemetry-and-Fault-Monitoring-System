@@ -252,10 +252,19 @@ async def websocket_telemetry_endpoint(websocket: WebSocket):
                 spd = float(data.get("speed", 0.0))
                 simulator.set_vehicle_speed(v_id, spd)
 
-            elif action == "brake" and simulator:
+            elif action == "accelerate" and simulator:
                 v_id = data.get("vehicle_id")
-                pressed = bool(data.get("pressed", True))
-                simulator.brake_vehicle(v_id, pressed)
+                delta = float(data.get("delta", 10.0))
+                simulator.accelerate_vehicle(v_id, delta)
+
+            elif (action == "decelerate" or action == "brake") and simulator:
+                v_id = data.get("vehicle_id")
+                delta = float(data.get("delta", 15.0))
+                simulator.brake_vehicle(v_id, delta)
+
+            elif action == "full_stop" and simulator:
+                v_id = data.get("vehicle_id")
+                simulator.full_stop_vehicle(v_id)
 
             elif action == "set_fleet_speed" and simulator:
                 spd = float(data.get("speed", 0.0))

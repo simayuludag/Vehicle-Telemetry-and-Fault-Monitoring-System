@@ -1,6 +1,7 @@
 """
 SAE J1939 Fleet Telemetry Simulator & Physics Engine
-Generates real-time 29-bit CAN frames (PGN 65265, SPN 84) for 30 commercial vehicles.
+Generates real-time 29-bit CAN frames (PGN 65265, SPN 84) for 30 vehicles.
+Features smooth, realistic, gradual acceleration and braking physics.
 """
 
 import asyncio
@@ -56,7 +57,7 @@ class FleetSimulator:
         return self.vehicles_state.get(vehicle_id)
 
     def set_vehicle_speed(self, vehicle_id: str, target_speed: float, mode: str = "manual") -> bool:
-        """Belirli bir aracın hedef hızını ayarlar"""
+        """Belirli bir aracın hedef hızını ayarlar (anlık zıplama olmadan kademeli hızlanma)"""
         if vehicle_id in self.vehicles_state:
             v = self.vehicles_state[vehicle_id]
             clamped = max(0.0, min(v["max_speed"], float(target_speed)))
@@ -66,19 +67,40 @@ class FleetSimulator:
             return True
         return False
 
-    def brake_vehicle(self, vehicle_id: str, pressed: bool = True) -> bool:
-        """Araca acil / servis freni uygular"""
+    def accelerate_vehicle(self, vehicle_id: str, delta: float = 10.0) -> bool:
+        """Aracın hedef hızını kademeli olarak artırır (+10 km/h)"""
         if vehicle_id in self.vehicles_state:
             v = self.vehicles_state[vehicle_id]
-            v["brake_pressed"] = pressed
-            if pressed:
-                v["target_speed"] = 0.0
-                v["simulation_mode"] = "manual"
+            new_target = min(v["max_speed"], v["target_speed"] + delta)
+            v["target_speed"] = new_target
+            v["brake_pressed"] = False
+            v["simulation_mode"] = "manual"
+            return True
+        return False
+
+    def brake_vehicle(self, vehicle_id: str, delta: float = 15.0) -> bool:
+        """Araca kademeli fren uygular (-15 km/h, direkt 0'a düşürmez, yavaşça azaltır)"""
+        if vehicle_id in self.vehicles_state:
+            v = self.vehicles_state[vehicle_id]
+            new_target = max(0.0, v["target_speed"] - delta)
+            v["target_speed"] = new_target
+            v["brake_pressed"] = (new_target == 0.0)
+            v["simulation_mode"] = "manual"
+            return True
+        return False
+
+    def full_stop_vehicle(self, vehicle_id: str) -> bool:
+        """Aracı kademeli olarak durmaya yönlendirir (0 km/h)"""
+        if vehicle_id in self.vehicles_state:
+            v = self.vehicles_state[vehicle_id]
+            v["target_speed"] = 0.0
+            v["brake_pressed"] = True
+            v["simulation_mode"] = "manual"
             return True
         return False
 
     def set_fleet_speed(self, target_speed: float) -> None:
-        """Tüm filoya ortak hız atar"""
+        """Tüm filoya ortak hedef hız atar (araçlar kendi ivmelerine göre kademeli ulaşır)"""
         for v in self.vehicles_state.values():
             clamped = max(0.0, min(v["max_speed"], float(target_speed)))
             v["target_speed"] = clamped
@@ -86,7 +108,7 @@ class FleetSimulator:
             v["brake_pressed"] = False
 
     def emergency_stop_all(self) -> None:
-        """Tüm araçları acil durdurur"""
+        """Tüm araçları kademeli olarak 0'a frenler"""
         for v in self.vehicles_state.values():
             v["target_speed"] = 0.0
             v["brake_pressed"] = True
@@ -94,23 +116,23 @@ class FleetSimulator:
     def apply_scenario(self, scenario_name: str) -> None:
         """
         Filo sürüş senaryoları:
-        - 'highway': Otoyol akışı (80 - 95 km/h)
-        - 'city': Şehir içi dur-kalk trafiği (20 - 55 km/h)
-        - 'convoy': Konvoy modu (Sabit 80 km/h)
-        - 'drag_race': Tam gaz hızlanma testi (Maksimum hız)
-        - 'idle': Rölanti / Park (0 km/h)
+        - 'highway': Otoyol (120 km/h)
+        - 'city': Şehir içi (50 km/h)
+        - 'convoy': Konvoy modu (Sabit 90 km/h)
+        - 'drag_race': Performans hızlanma testi (Maksimum hız)
+        - 'idle': Park (0 km/h)
         """
         self.active_scenario = scenario_name
         for v in self.vehicles_state.values():
             v["brake_pressed"] = False
             if scenario_name == "highway":
-                v["target_speed"] = random.uniform(82.0, min(95.0, v["max_speed"]))
+                v["target_speed"] = min(120.0, v["max_speed"])
                 v["simulation_mode"] = "highway"
             elif scenario_name == "city":
-                v["target_speed"] = random.uniform(25.0, 55.0)
+                v["target_speed"] = min(50.0, v["max_speed"])
                 v["simulation_mode"] = "city"
             elif scenario_name == "convoy":
-                v["target_speed"] = 80.0
+                v["target_speed"] = min(90.0, v["max_speed"])
                 v["simulation_mode"] = "cruise"
             elif scenario_name == "drag_race":
                 v["target_speed"] = v["max_speed"]
@@ -120,38 +142,36 @@ class FleetSimulator:
                 v["simulation_mode"] = "manual"
 
     def _update_vehicle_physics(self, v: Dict[str, Any], dt: float) -> float:
-        """Fizik kurallarına göre bir aracın hızını bir adım günceller"""
+        """Fizik kurallarına göre bir aracın hızını yumuşak ve kademeli günceller"""
         current = v["current_speed"]
         target = v["target_speed"]
-        accel_rate = v["acceleration_rate"]
+        accel_rate = v.get("acceleration_rate", 6.0)
 
-        if v["brake_pressed"]:
-            # Frenleme ivmesi daha yüksektir (-12 km/h/s)
-            current = max(0.0, current - 12.0 * dt)
-        elif abs(current - target) > 0.2:
-            direction = 1.0 if target > current else -1.0
-            # Hızlanma veya yavaşlama
-            step = accel_rate * dt * (1.5 if direction < 0 else 1.0)
-            if abs(target - current) < step:
-                current = target
+        diff = target - current
+
+        if abs(diff) > 0.05:
+            # Hızlanma veya Yavaşlama
+            if diff > 0:
+                # Gaz verme ivmesi
+                rate = accel_rate
+                step = rate * dt
+                if diff <= step:
+                    current = target
+                else:
+                    current += step
             else:
-                current += direction * step
+                # Frenleme / Yavaşlama ivmesi (hızlanmaya göre biraz daha hızlı ve yumuşak)
+                rate = accel_rate * 1.8
+                step = rate * dt
+                if abs(diff) <= step:
+                    current = target
+                else:
+                    current -= step
         else:
-            # Hedef hıza ulaşıldığında gerçek CAN sensör gürültüsü (mikro titreşim)
-            if current > 5.0 and not v["brake_pressed"]:
-                noise = random.uniform(-0.15, 0.15)
-                current = max(0.0, min(v["max_speed"], target + noise))
-            else:
-                current = target
-
-        # Senaryo bazlı otomatik dalgalanma
-        if v["simulation_mode"] == "city" and random.random() < 0.02:
-            v["target_speed"] = random.uniform(15.0, 55.0)
-        elif v["simulation_mode"] == "highway" and random.random() < 0.01:
-            v["target_speed"] = random.uniform(80.0, min(92.0, v["max_speed"]))
+            current = target
 
         v["current_speed"] = round(current, 2)
-        v["status"] = "stopped" if current < 0.5 else ("braking" if v["brake_pressed"] else ("accelerating" if target > current + 1.0 else "cruising"))
+        v["status"] = "stopped" if current < 0.5 else ("braking" if target < current - 1.0 else ("accelerating" if target > current + 1.0 else "cruising"))
         return v["current_speed"]
 
     async def _simulation_loop(self):

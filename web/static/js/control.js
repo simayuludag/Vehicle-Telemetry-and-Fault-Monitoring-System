@@ -135,27 +135,26 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <div class="card-quick-controls">
-          <input type="range" min="0" max="${v.max_speed}" value="${Math.round(v.target_speed)}" 
-                 id="card-slider-${v.id}" title="Hız Ver" />
-          <button class="btn-card-brake" id="card-brake-${v.id}">FREN</button>
+          <button class="btn-card-accel" id="card-accel-${v.id}">⚡ +10 Hız Ver</button>
+          <button class="btn-card-brake" id="card-brake-${v.id}">🛑 -15 Fren</button>
         </div>
       `;
 
       card.addEventListener('click', (e) => {
-        if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'button') return;
+        if (e.target.tagName.toLowerCase() === 'button') return;
         selectVehicle(v.id);
       });
 
-      const cardSlider = card.querySelector(`#card-slider-${v.id}`);
-      cardSlider.addEventListener('input', (e) => {
-        const newSpeed = parseFloat(e.target.value);
-        sendSpeedCommand(v.id, newSpeed);
+      card.querySelector(`#card-accel-${v.id}`).addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectVehicle(v.id);
+        sendAccelerateCommand(v.id, 10.0);
       });
 
-      const cardBrake = card.querySelector(`#card-brake-${v.id}`);
-      cardBrake.addEventListener('click', () => {
-        sendBrakeCommand(v.id, true);
-        cardSlider.value = 0;
+      card.querySelector(`#card-brake-${v.id}`).addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectVehicle(v.id);
+        sendDecelerateCommand(v.id, 15.0);
       });
 
       fleetGridEl.appendChild(card);
@@ -224,19 +223,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function sendBrakeCommand(vehicleId, pressed) {
+  function sendAccelerateCommand(vehicleId, delta = 10.0) {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({
-        action: 'brake',
+        action: 'accelerate',
         vehicle_id: vehicleId,
-        pressed: pressed
+        delta: delta
       }));
-    } else {
-      fetch(`/api/vehicle/${vehicleId}/brake`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pressed: pressed })
-      });
+    }
+  }
+
+  function sendDecelerateCommand(vehicleId, delta = 15.0) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        action: 'decelerate',
+        vehicle_id: vehicleId,
+        delta: delta
+      }));
     }
   }
 
@@ -287,19 +290,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnThrottleEl.addEventListener('click', () => {
-    const v = fleet.find(item => item.id === selectedVehicleId);
-    if (v) {
-      const nextSpeed = Math.min(v.max_speed, v.target_speed + 15);
-      mainSpeedSliderEl.value = nextSpeed;
-      targetSpeedDisplayEl.textContent = Math.round(nextSpeed);
-      sendSpeedCommand(selectedVehicleId, nextSpeed);
-    }
+    sendAccelerateCommand(selectedVehicleId, 10.0);
   });
 
   btnBrakeEl.addEventListener('click', () => {
-    mainSpeedSliderEl.value = 0;
-    targetSpeedDisplayEl.textContent = 0;
-    sendBrakeCommand(selectedVehicleId, true);
+    sendDecelerateCommand(selectedVehicleId, 15.0);
   });
 
   document.querySelectorAll('.btn-scenario').forEach(btn => {
