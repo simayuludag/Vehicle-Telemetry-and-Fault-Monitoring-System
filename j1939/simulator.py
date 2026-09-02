@@ -142,27 +142,39 @@ class FleetSimulator:
                 v["simulation_mode"] = "manual"
 
     def _update_vehicle_physics(self, v: Dict[str, Any], dt: float) -> float:
-        """Fizik kurallarına göre bir aracın hızını yumuşak ve kademeli günceller"""
+        """
+        Gerçekçi Otomotiv Dinamiği ve Hava Direnci (Aerodynamic Drag) Fiziği:
+        - Düşük hızlarda (0-80 km/h) motor torku yüksektir, araç çok hızlı ivmelenir.
+        - Hız arttıkça hava sürtünmesi (F_drag ~ v^2) ve güç limiti nedeniyle ivmelenme azalır.
+          Örn: 0-100 km/h hızlanması 5 sn süren bir araç için 100-200 km/h hızlanması ~12-16 sn sürer.
+        """
         current = v["current_speed"]
         target = v["target_speed"]
-        accel_rate = v.get("acceleration_rate", 6.0)
+        base_accel = v.get("acceleration_rate", 6.0)
+        max_speed = v.get("max_speed", 250.0)
 
         diff = target - current
 
         if abs(diff) > 0.05:
-            # Hızlanma veya Yavaşlama
             if diff > 0:
-                # Gaz verme ivmesi
-                rate = accel_rate
-                step = rate * dt
+                # ⚡ HIZLANMA: Aerodinamik direnç ve yüksek hızda düşen ivme eğrisi
+                speed_ratio = min(1.0, current / max_speed)
+                # Karesel hava sürtünmesi faktörü: 0 km/h'de 1.0 çarpan, son hıza yaklaştıkça %12'ye kadar iner
+                drag_factor = max(0.12, 1.0 - 0.85 * (speed_ratio ** 1.8))
+                effective_accel = base_accel * drag_factor
+
+                step = effective_accel * dt
                 if diff <= step:
                     current = target
                 else:
                     current += step
             else:
-                # Frenleme / Yavaşlama ivmesi (hızlanmaya göre biraz daha hızlı ve yumuşak)
-                rate = accel_rate * 1.8
-                step = rate * dt
+                # 🛑 FRENLEME: Mekanik disk freni + yüksek hızda hava direnci desteği
+                speed_ratio = min(1.0, current / max_speed)
+                brake_factor = 1.0 + 0.4 * speed_ratio
+                effective_brake = (base_accel * 1.8) * brake_factor
+
+                step = effective_brake * dt
                 if abs(diff) <= step:
                     current = target
                 else:
