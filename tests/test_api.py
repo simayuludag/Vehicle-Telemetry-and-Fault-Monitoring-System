@@ -118,7 +118,7 @@ def test_index_and_control_pages_served(client):
     # Ortam 2 (Monitor)
     res_index = client.get("/")
     assert res_index.status_code == 200
-    assert "J1939 Telemetri" in res_index.text
+    assert "J1939" in res_index.text
     assert "speedGaugeCanvas" in res_index.text
 
     # Ortam 1 (Control)

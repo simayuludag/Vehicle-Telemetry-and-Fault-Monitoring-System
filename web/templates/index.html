@@ -3,17 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>J1939 CAN Bus Telemetri & Merkezi Hız Kontrol Paneli</title>
-  <meta name="description" content="SAE J1939 Standardında 30 Araç İçin Tek Merkezden Hız Kontrolü, Canlı Telemetri ve CAN Sniffer (PGN 65265, SPN 84).">
+  <title>J1939 CAN Bus Çoklu Sinyal & Telemetri Paneli</title>
+  <meta name="description" content="SAE J1939 Standardında 30 Araç İçin Hız, Gaz Pedalı, Fren, Vites ve Batarya Telemetri Paneli (CCVS, EEC2, ETC2, HVS).">
   
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   <style>
-    /* Tek Merkezden Kontrol Bölümü Vurgulamaları */
     .control-scope-tabs {
       display: flex;
       gap: 8px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       background: rgba(0,0,0,0.3);
       padding: 4px;
       border-radius: var(--radius-md);
@@ -52,10 +51,10 @@
       <div class="logo-badge">J19</div>
       <div class="brand-title">
         <h1>
-          J1939 Telemetri & Merkezi Hız Kontrolü
-          <span class="j1939-pill">SAE J1939 · PGN 65265 · SPN 84</span>
+          J1939 Çoklu Sinyal Telemetri & Kontrol Paneli
+          <span class="j1939-pill">SAE J1939 · CCVS · EEC2 · ETC2 · HVS</span>
         </h1>
-        <p>10 Popüler Marka · 30 Model Tek Merkezden Canlı Hız Yönetimi & CAN Sniffer</p>
+        <p>10 Popüler Marka · 30 Model Hız, Gaz, Fren, Vites ve Batarya Telemetrisi</p>
       </div>
     </div>
 
@@ -87,15 +86,15 @@
   <!-- MAIN WORKSPACE -->
   <main class="main-container">
 
-    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID (CLEAN & PURE MONITORING) -->
+    <!-- LEFT COLUMN: 30 VEHICLES FLEET GRID -->
     <section class="panel-card">
       <div class="panel-header">
         <div class="panel-header-title">
-          <h2>🚗 Araç Filosu (30 Popüler Model)</h2>
+          <h2>🚗 Araç Filosu (30 Model)</h2>
           <span class="badge-counter">10 Marka</span>
         </div>
-        <div style="font-family:var(--font-mono); font-size:0.78rem; color:var(--text-muted)">
-          Kontrol etmek için araca tıklayın
+        <div style="font-family:var(--font-mono); font-size:0.76rem; color:var(--text-muted)">
+          Detay ve kontrol için araca tıklayın
         </div>
       </div>
 
@@ -105,15 +104,15 @@
       </div>
 
       <!-- 30 Vehicles Grid List -->
-      <div class="vehicles-grid" id="fleetGrid" style="max-height: 720px;">
+      <div class="vehicles-grid" id="fleetGrid">
         <!-- Dynamically populated clean vehicle cards -->
       </div>
     </section>
 
-    <!-- RIGHT COLUMN: TEK MERKEZİ HIZ KONTROLÜ, KADRAN & CAN SNIFFER -->
+    <!-- RIGHT COLUMN: MULTI-SIGNAL COCKPIT HUD & CAN SNIFFER -->
     <section class="cockpit-column">
 
-      <!-- 1. UNIFIED CENTRAL SPEED CONTROL & SPEEDOMETER GAUGE -->
+      <!-- 1. MULTI-SIGNAL COCKPIT HUD (SPEED, THROTTLE, BRAKE, GEAR, BATTERY) -->
       <div class="cockpit-card">
         
         <!-- Active Vehicle Info Banner -->
@@ -125,15 +124,82 @@
           <div class="j1939-pill" id="activeScopePill">SEÇİLİ ARAÇ KONTROLÜ</div>
         </div>
 
-        <!-- HTML5 Canvas Speedometer Gauge -->
-        <div class="gauge-container">
-          <canvas id="speedGaugeCanvas" width="320" height="220"></canvas>
+        <!-- Cockpit HUD Center: Vertical Throttle Bar + Canvas Gauge + Vertical Brake Bar -->
+        <div class="cockpit-hud-center">
+          
+          <!-- Left: Throttle Pedal HUD (SPN 91) -->
+          <div class="pedal-hud-vertical">
+            <span class="pedal-label" style="color:var(--accent-emerald)">⚡ GAZ</span>
+            <div class="pedal-bar-vertical-track" title="SPN 91 Gaz Pedalı Açıklığı (%)">
+              <div class="pedal-bar-vertical-fill throttle" id="throttleBarFill" style="height: 20%;"></div>
+            </div>
+            <span class="pedal-val-readout" id="throttleReadout" style="color:var(--accent-emerald)">%20</span>
+          </div>
+
+          <!-- Center: Speedometer Gauge (SPN 84) -->
+          <div class="gauge-container">
+            <canvas id="speedGaugeCanvas" width="280" height="190"></canvas>
+          </div>
+
+          <!-- Right: Brake Pedal HUD (SPN 563 / 521) -->
+          <div class="pedal-hud-vertical">
+            <span class="pedal-label" style="color:var(--accent-rose)">🛑 FREN</span>
+            <div class="pedal-bar-vertical-track" title="SPN 563 Fren Durumu / Basıncı (%)">
+              <div class="pedal-bar-vertical-fill brake" id="brakeBarFill" style="height: 0%;"></div>
+            </div>
+            <span class="pedal-val-readout" id="brakeReadout" style="color:var(--accent-rose)">%0</span>
+          </div>
+
         </div>
 
-        <!-- UNIFIED SINGLE SPEED CONTROL DECK -->
+        <!-- Telemetry Strip: Transmission Gear Box & Battery SOC/SOH -->
+        <div class="telemetry-strip-grid">
+          
+          <!-- Gear Box Display (SPN 523 - PGN 61445 ETC2) -->
+          <div class="telemetry-mini-box">
+            <div class="mini-box-header">
+              <span>🕹️ Şanzıman Vites Durumu</span>
+              <span style="color:var(--accent-amber); font-family:var(--font-mono)">PGN 0xF005</span>
+            </div>
+            <div class="gearbox-visual-row">
+              <div class="gear-slot" id="gear-P">P</div>
+              <div class="gear-slot" id="gear-R">R</div>
+              <div class="gear-slot" id="gear-N">N</div>
+              <div class="gear-slot" id="gear-D1">D1</div>
+              <div class="gear-slot" id="gear-D2">D2</div>
+              <div class="gear-slot" id="gear-D3">D3</div>
+              <div class="gear-slot" id="gear-D4">D4</div>
+              <div class="gear-slot active" id="gear-D5">D5</div>
+              <div class="gear-slot" id="gear-D6">D6</div>
+              <div class="gear-slot" id="gear-D7">D7</div>
+              <div class="gear-slot" id="gear-D8">D8</div>
+            </div>
+          </div>
+
+          <!-- Battery Box (SPN 3543 SOC & SPN 5328 SOH - PGN 65110 HVS) -->
+          <div class="telemetry-mini-box">
+            <div class="mini-box-header">
+              <span>🔋 Batarya Telemetrisi</span>
+              <span style="color:var(--accent-purple); font-family:var(--font-mono)">PGN 0xFE56</span>
+            </div>
+            <div class="battery-visual-wrap">
+              <div>
+                <div style="font-size:0.68rem; color:var(--text-muted)">ŞARJ SEVİYESİ (SOC)</div>
+                <div class="battery-soc-text" id="batterySocText">%95.0</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:0.68rem; color:var(--text-muted)">SAĞLIK (SOH)</div>
+                <div class="battery-soh-text" id="batterySohText">%99.0 Mükemmel</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- UNIFIED CENTRAL CONTROL DECK -->
         <div class="cockpit-controls">
 
-          <!-- Control Scope Tabs: Single Vehicle vs Master Fleet -->
+          <!-- Control Scope Tabs -->
           <div class="control-scope-tabs">
             <button class="scope-tab-btn active" id="tabSingleVehicle">
               🎯 Seçili Aracı Kontrol Et
@@ -143,7 +209,7 @@
             </button>
           </div>
 
-          <!-- Master Target Speed Slider -->
+          <!-- Speed Slider -->
           <div class="speed-slider-row">
             <label for="speedSlider" id="sliderLabel">Hedef Hız:</label>
             <input type="range" id="speedSlider" min="0" max="250" value="110">
@@ -174,9 +240,9 @@
             </button>
           </div>
 
-          <!-- Quick Scenarios Row -->
-          <div style="margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
-            <span style="font-size:0.74rem; color:var(--text-muted);">Hızlı Senaryolar:</span>
+          <!-- Scenarios Row -->
+          <div style="margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
+            <span style="font-size:0.74rem; color:var(--text-muted);">Sürüş Senaryoları:</span>
             <div class="scenario-btns">
               <button class="btn-scenario active" data-scenario="normal">🚦 Normal</button>
               <button class="btn-scenario" data-scenario="highway">🛣️ Otoyol (120)</button>
@@ -189,11 +255,11 @@
         </div>
       </div>
 
-      <!-- 2. J1939 29-BIT CAN FRAME & SPN 84 INSPECTOR -->
+      <!-- 2. J1939 MULTI-PGN CAN INSPECTOR -->
       <div class="inspector-card">
         <div class="inspector-title">
-          <span>📡 SAE J1939 29-Bit CAN Çerçeve Ayrıştırıcı (Inspector)</span>
-          <span style="font-size:0.75rem; color:var(--accent-cyan); font-family:var(--font-mono)">CCVS Protocol</span>
+          <span>📡 SAE J1939 Canlı Çerçeve Ayrıştırıcı (Inspector)</span>
+          <span style="font-size:0.75rem; color:var(--accent-cyan); font-family:var(--font-mono)" id="inspPgnBadge">PGN 65265 (CCVS1)</span>
         </div>
 
         <!-- 29-bit CAN ID Bit Breakdown -->
@@ -220,7 +286,7 @@
         <div class="hex-dump-wrap">
           <div class="hex-dump-label">
             <span>8-Bayt CAN Yükü (Hex Payload):</span>
-            <span style="color:var(--accent-cyan)">Bayt 1-2: SPN 84 Wheel Speed</span>
+            <span style="color:var(--accent-cyan)" id="hexDumpLegend">Bayt 1-2: SPN 84 Hız | Bayt 4: Fren Switch</span>
           </div>
           <div class="hex-bytes-row" id="hexBytesRow">
             <!-- Populated dynamically (B0 to B7) -->
@@ -231,14 +297,14 @@
         </div>
       </div>
 
-      <!-- 3. LIVE J1939 CAN SNIFFER / TERMINAL -->
+      <!-- 3. LIVE J1939 MULTI-SIGNAL CAN SNIFFER -->
       <div class="sniffer-card">
         <div class="sniffer-toolbar">
           <div class="left-tools">
             <span style="font-family:var(--font-tech); font-weight:700; font-size:0.92rem; color:var(--text-primary)">
-              📟 CAN Bus Sniffer (Gelen Paketler)
+              📟 CAN Bus Sniffer (Hız, Gaz, Vites, Batarya)
             </span>
-            <input type="text" class="sniffer-search-input" id="snifferSearchInput" placeholder="Plaka, CAN ID veya PGN ara...">
+            <input type="text" class="sniffer-search-input" id="snifferSearchInput" placeholder="PGN, Sinyal veya Araç ara...">
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn-sniffer-action" id="pauseSnifferBtn">⏸ Duraklat</button>
@@ -253,10 +319,10 @@
               <tr>
                 <th>Zaman</th>
                 <th>CAN ID</th>
-                <th>PGN</th>
+                <th>PGN / Mesaj</th>
                 <th>Source (Araç)</th>
-                <th>Data (8 Bayt)</th>
-                <th>SPN 84 Hız</th>
+                <th>Hex Veri (8 Bayt)</th>
+                <th>Çözülen Sinyal</th>
               </tr>
             </thead>
             <tbody id="snifferTableBody">
@@ -272,7 +338,7 @@
   <!-- FOOTER -->
   <footer class="footer">
     <p>
-      SAE J1939 Merkezi Araç Hız Kontrol & Telemetri Platformu · 10 Popüler Marka (BMW, Mercedes-Benz, Audi, Volkswagen, Toyota, Tesla, Ford, Renault, Hyundai, Fiat) · 30 Model
+      SAE J1939 Çoklu Sinyal Telemetri ve Kontrol Platformu · PGN 65265 (Hız/Fren), PGN 61443 (Gaz), PGN 61445 (Vites), PGN 65110 (Batarya SOC/SOH)
     </p>
   </footer>
 

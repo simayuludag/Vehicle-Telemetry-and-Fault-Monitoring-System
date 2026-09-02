@@ -1,5 +1,5 @@
 /* ==========================================================================
-   J1939 FLEET TELEMETRY & SPEED MONITOR - CLEAN CYBER AUTOMOTIVE DESIGN SYSTEM
+   J1939 FLEET TELEMETRY & MULTI-SIGNAL SPEED MONITOR - CYBER AUTOMOTIVE DESIGN
    ========================================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
@@ -301,66 +301,7 @@ body {
   box-shadow: 0 0 12px rgba(0, 210, 255, 0.2);
 }
 
-/* Fleet Scenario Controls Bar */
-.fleet-scenarios-bar {
-  padding: 12px 20px;
-  background: rgba(0, 0, 0, 0.25);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.scenario-btns {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.btn-scenario {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.btn-scenario:hover {
-  border-color: var(--accent-blue);
-  color: var(--text-primary);
-}
-
-.btn-scenario.active {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: var(--accent-blue);
-  color: var(--accent-blue);
-  font-weight: 600;
-}
-
-.master-speed-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.master-speed-control label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.master-speed-control input[type="range"] {
-  width: 110px;
-  accent-color: var(--accent-cyan);
-}
-
-/* ==========================================================================
-   30 VEHICLES GRID & DETAILED CARDS
-   ========================================================================== */
+/* 30 Vehicles Grid List */
 .vehicles-grid {
   padding: 20px;
   display: grid;
@@ -474,6 +415,30 @@ body {
   font-family: var(--font-mono);
 }
 
+.card-signals-pill-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.card-signal-badge {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+
+.card-signal-badge.gear {
+  color: var(--accent-amber);
+  font-weight: 700;
+}
+
+.card-signal-badge.battery {
+  color: var(--accent-emerald);
+}
+
 .status-badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -506,13 +471,12 @@ body {
   border: 1px solid rgba(100, 116, 139, 0.3);
 }
 
-/* Speed Progress Bar */
 .speed-bar-track {
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   overflow: hidden;
-  margin: 4px 0;
+  margin-top: 2px;
 }
 
 .speed-bar-fill {
@@ -522,52 +486,8 @@ body {
   transition: width 0.15s ease-out;
 }
 
-/* Card Controls */
-.card-quick-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 4px;
-}
-
-.btn-card-accel {
-  background: rgba(16, 185, 129, 0.15);
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  color: var(--accent-emerald);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 1;
-  transition: var(--transition-smooth);
-}
-
-.btn-card-accel:hover {
-  background: var(--accent-emerald);
-  color: #07090e;
-}
-
-.btn-card-brake {
-  background: rgba(244, 63, 94, 0.15);
-  border: 1px solid rgba(244, 63, 94, 0.4);
-  color: var(--accent-rose);
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 5px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  flex: 1;
-  transition: var(--transition-smooth);
-}
-
-.btn-card-brake:hover {
-  background: var(--accent-rose);
-  color: white;
-}
-
 /* ==========================================================================
-   COCKPIT & CAN SNIFFER (RIGHT COLUMN)
+   COCKPIT MULTI-SIGNAL CONSOLE (RIGHT COLUMN)
    ========================================================================== */
 .cockpit-column {
   display: flex;
@@ -623,29 +543,164 @@ body {
   color: var(--text-muted);
 }
 
-/* Gauge Canvas Container */
-.gauge-container {
-  width: 320px;
-  height: 220px;
-  position: relative;
-  display: flex;
-  justify-content: center;
+/* Multi-Signal HUD Center */
+.cockpit-hud-center {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
   align-items: center;
+  gap: 16px;
   margin: 10px 0;
 }
 
+/* Vertical Pedal Meters (Throttle & Brake) */
+.pedal-hud-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pedal-hud-vertical .pedal-label {
+  font-family: var(--font-tech);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pedal-bar-vertical-track {
+  width: 18px;
+  height: 140px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.pedal-bar-vertical-fill {
+  width: 100%;
+  height: 0%;
+  border-radius: var(--radius-full);
+  transition: height 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pedal-bar-vertical-fill.throttle {
+  background: linear-gradient(180deg, #10b981 0%, #00d2ff 100%);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+.pedal-bar-vertical-fill.brake {
+  background: linear-gradient(180deg, #f43f5e 0%, #be123c 100%);
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+}
+
+.pedal-val-readout {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* Gauge Canvas Container */
+.gauge-container {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 #speedGaugeCanvas {
-  width: 320px;
-  height: 220px;
+  width: 280px;
+  height: 190px;
+}
+
+/* Telemetry Mini-Cards Strip (Gear & Battery) */
+.telemetry-strip-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.telemetry-mini-box {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mini-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Gear Box Selector Display */
+.gearbox-visual-row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.gear-slot {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-tech);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 2px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  transition: var(--transition-smooth);
+}
+
+.gear-slot.active {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+/* Battery SOC/SOH Visual */
+.battery-visual-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.battery-soc-text {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--accent-emerald);
+}
+
+.battery-soh-text {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
 }
 
 /* Cockpit Speed Controls */
 .cockpit-controls {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .speed-slider-row {
@@ -760,8 +815,37 @@ body {
   transform: translateY(-2px);
 }
 
+.scenario-btns {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-scenario {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-scenario:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.btn-scenario.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
 /* ==========================================================================
-   J1939 CAN FRAME BIT INSPECTOR
+   J1939 MULTI-PGN CAN INSPECTOR
    ========================================================================== */
 .inspector-card {
   background: var(--bg-glass);
@@ -785,7 +869,7 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .id-field-box {
@@ -972,26 +1056,30 @@ body {
 }
 
 .pgn-col {
-  color: var(--accent-amber);
+  font-weight: 600;
 }
 
+.pgn-col.ccvs { color: #00d2ff; }
+.pgn-col.eec2 { color: #10b981; }
+.pgn-col.etc2 { color: #f59e0b; }
+.pgn-col.hvs  { color: #a855f7; }
+
 .sa-col {
-  color: var(--accent-purple);
+  color: var(--text-secondary);
 }
 
 .data-hex-col {
   letter-spacing: 1px;
 }
 
-.data-hex-col span.speed-bytes {
-  color: var(--accent-cyan);
+.signal-val-col {
   font-weight: 700;
 }
 
-.speed-col {
-  color: var(--accent-emerald);
-  font-weight: 700;
-}
+.signal-val-col.speed { color: var(--accent-cyan); }
+.signal-val-col.throttle { color: var(--accent-emerald); }
+.signal-val-col.gear { color: var(--accent-amber); }
+.signal-val-col.battery { color: var(--accent-purple); }
 
 /* ==========================================================================
    FOOTER

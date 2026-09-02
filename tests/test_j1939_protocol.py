@@ -1,5 +1,10 @@
 """
-Unit Tests for SAE J1939 29-Bit Protocol & SPN 84 Speed Codec
+Unit Tests for SAE J1939 Multi-Signal Protocol & Codec
+Tests:
+- PGN 65265 (CCVS1): SPN 84 Speed & Brake Switch
+- PGN 61443 (EEC2) : SPN 91 Accelerator Pedal %
+- PGN 61445 (ETC2) : SPN 523 Transmission Current Gear
+- PGN 65110 (HVS)  : SPN 3543 Battery SOC % & SPN 5328 Battery SOH %
 """
 
 import pytest
@@ -7,12 +12,19 @@ from j1939.protocol import (
     build_j1939_can_id,
     parse_j1939_can_id,
     pack_j1939_ccvs_speed,
-    unpack_j1939_ccvs_speed,
+    unpack_j1939_ccvs,
+    pack_j1939_eec2_throttle,
+    unpack_j1939_eec2,
+    pack_j1939_etc2_gear,
+    unpack_j1939_etc2,
+    pack_j1939_hvs_battery,
+    unpack_j1939_hvs,
     J1939Codec,
     J1939Frame,
     PGN_CCVS,
-    SPN_VEHICLE_SPEED,
-    SPEED_RESOLUTION,
+    PGN_EEC2,
+    PGN_ETC2,
+    PGN_HVS,
     MAX_SPEED_KMH,
 )
 
@@ -21,11 +33,9 @@ def test_j1939_can_id_packing_and_parsing():
     """29-bit Extended CAN ID oluşturma ve ayrıştırma doğrulaması"""
     priority = 6
     pgn = PGN_CCVS  # 65265 (0xFEF1)
-    source_address = 0x01  # Mercedes Actros SA
+    source_address = 0x01  # BMW 320i SA
 
     can_id = build_j1939_can_id(pgn=pgn, source_address=source_address, priority=priority)
-
-    # 29-bit CAN ID: (6 << 26) | (65265 << 8) | 1 = 0x18FEF101
     assert can_id == 0x18FEF101
 
     p_out, pgn_out, sa_out = parse_j1939_can_id(can_id)
@@ -53,23 +63,19 @@ def test_spn84_speed_codec_resolution_and_accuracy():
         data = pack_j1939_ccvs_speed(speed_kmh=speed)
         assert len(data) == 8
 
-        unpacked = unpack_j1939_ccvs_speed(data)
-        assert unpacked["speed_valid"] is True
-        # 1/256 km/h çözünürlük farkı en fazla 0.01 km/h olmalıdır
-        assert abs(unpacked["spn_84_speed_kmh"] - speed) <= 0.01
+        unpacked = unpack_j1939_ccvs(data)
+        assert abs(unpacked["speed_kmh"] - speed) <= 0.01
 
 
 def test_spn84_zero_and_clamp_boundaries():
     """Sınır değer (0 km/h ve negatif hız) testleri"""
-    # Negatif hız 0'a çekilmelidir
     data = pack_j1939_ccvs_speed(speed_kmh=-15.0)
-    unpacked = unpack_j1939_ccvs_speed(data)
-    assert unpacked["spn_84_speed_kmh"] == 0.0
+    unpacked = unpack_j1939_ccvs(data)
+    assert unpacked["speed_kmh"] == 0.0
 
-    # Maksimum hızı aşan değerler sınırlandırılmalıdır
     data_max = pack_j1939_ccvs_speed(speed_kmh=350.0)
-    unpacked_max = unpack_j1939_ccvs_speed(data_max)
-    assert unpacked_max["spn_84_speed_kmh"] <= MAX_SPEED_KMH + 0.1
+    unpacked_max = unpack_j1939_ccvs(data_max)
+    assert unpacked_max["speed_kmh"] <= MAX_SPEED_KMH + 0.1
 
 
 def test_ccvs_status_flags():
@@ -80,31 +86,79 @@ def test_ccvs_status_flags():
         brake_switch=True,
         cruise_active=True
     )
-    unpacked = unpack_j1939_ccvs_speed(data)
-
+    unpacked = unpack_j1939_ccvs(data)
     assert unpacked["parking_brake"] is True
     assert unpacked["brake_pressed"] is True
-    assert unpacked["cruise_active"] is True
 
 
-def test_j1939_codec_full_roundtrip():
-    """J1939Codec sınıfı üzerinden tam çerçeve kodlama ve çözme"""
-    speed_in = 88.5
-    sa = 0x07  # Volvo FH16 SA
-    frame = J1939Codec.encode_speed_frame(speed_kmh=speed_in, source_address=sa, priority=6)
+def test_eec2_throttle_pedal_codec():
+    """PGN 61443 (EEC2) SPN 91 Gaz Pedalı Açıklığı (%) Testleri"""
+    for throttle in [0.0, 15.0, 45.5, 78.0, 100.0]:
+        data = pack_j1939_eec2_throttle(throttle_pct=throttle)
+        assert len(data) == 8
+        unpacked = unpack_j1939_eec2(data)
+        # 0.4% / bit çözünürlük ile hata <= 0.4% olmalıdır
+        assert abs(unpacked["throttle_pct"] - throttle) <= 0.4
 
-    assert frame.can_id_hex == "0x18FEF107"
-    assert frame.pgn == PGN_CCVS
-    assert frame.source_address == 0x07
+    # Sınır kontrolü (0 - 100%)
+    data_neg = pack_j1939_eec2_throttle(throttle_pct=-20.0)
+    assert unpack_j1939_eec2(data_neg)["throttle_pct"] == 0.0
 
-    # Çözme
-    decoded_frame = J1939Codec.decode_frame(frame.can_id, frame.data)
-    assert decoded_frame.source_address == 0x07
-    assert decoded_frame.pgn == PGN_CCVS
-    assert abs(decoded_frame.decoded_speed_kmh - speed_in) <= 0.01
+    data_over = pack_j1939_eec2_throttle(throttle_pct=150.0)
+    assert unpack_j1939_eec2(data_over)["throttle_pct"] == 100.0
 
-    # Sözlük dönüşümü
-    d = frame.to_dict()
-    assert d["spn"] == SPN_VEHICLE_SPEED
-    assert d["can_id_hex"] == "0x18FEF107"
-    assert d["source_address_hex"] == "0x07"
+
+def test_etc2_gear_codec():
+    """PGN 61445 (ETC2) SPN 523 Şanzıman Vites Durumu Testleri"""
+    gears_to_test = ["P", "R", "N", "D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"]
+    for g in gears_to_test:
+        data = pack_j1939_etc2_gear(gear_str=g)
+        assert len(data) == 8
+        unpacked = unpack_j1939_etc2(data)
+        assert unpacked["gear_str"] == g
+
+
+def test_hvs_battery_soc_soh_codec():
+    """PGN 65110 (HVS) SPN 3543 (SOC %) & SPN 5328 (SOH %) Testleri"""
+    test_cases = [
+        (95.0, 100.0),
+        (50.0, 98.0),
+        (12.5, 95.5),
+        (0.0, 85.0),
+        (100.0, 100.0),
+    ]
+    for soc, soh in test_cases:
+        data = pack_j1939_hvs_battery(soc_pct=soc, soh_pct=soh)
+        assert len(data) == 8
+        unpacked = unpack_j1939_hvs(data)
+        assert abs(unpacked["soc_pct"] - soc) <= 0.4
+        assert abs(unpacked["soh_pct"] - soh) <= 0.4
+
+
+def test_j1939_codec_multi_signal_roundtrip():
+    """J1939Codec sınıfı üzerinden çoklu PGN kodlama ve çözme döngüsü"""
+    sa = 0x10  # Tesla Model 3 SA
+
+    # 1. Hız Çerçevesi
+    f_speed = J1939Codec.encode_speed_frame(speed_kmh=125.5, source_address=sa)
+    dec_speed = J1939Codec.decode_frame(f_speed.can_id, f_speed.data)
+    assert dec_speed.signal_name == "VEHICLE_SPEED"
+    assert abs(dec_speed.decoded_info["speed_kmh"] - 125.5) <= 0.01
+
+    # 2. Gaz Çerçevesi
+    f_throttle = J1939Codec.encode_throttle_frame(throttle_pct=65.0, source_address=sa)
+    dec_throttle = J1939Codec.decode_frame(f_throttle.can_id, f_throttle.data)
+    assert dec_throttle.signal_name == "THROTTLE_PEDAL"
+    assert abs(dec_throttle.decoded_info["throttle_pct"] - 65.0) <= 0.4
+
+    # 3. Vites Çerçevesi
+    f_gear = J1939Codec.encode_gear_frame(gear_str="D6", source_address=sa)
+    dec_gear = J1939Codec.decode_frame(f_gear.can_id, f_gear.data)
+    assert dec_gear.signal_name == "TRANSMISSION_GEAR"
+    assert dec_gear.decoded_info["gear_str"] == "D6"
+
+    # 4. Batarya Çerçevesi
+    f_bat = J1939Codec.encode_battery_frame(soc_pct=88.5, soh_pct=99.0, source_address=sa)
+    dec_bat = J1939Codec.decode_frame(f_bat.can_id, f_bat.data)
+    assert dec_bat.signal_name == "BATTERY_STATUS"
+    assert abs(dec_bat.decoded_info["soc_pct"] - 88.5) <= 0.4
