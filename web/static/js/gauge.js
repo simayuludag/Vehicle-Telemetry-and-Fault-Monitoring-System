@@ -39,10 +39,10 @@ class SpeedGauge {
   }
 
   animate() {
-    // Yumuşak hız geçişi (lerp)
+    // Yumuşak ve hızlı hız geçişi (lerp)
     const diff = this.targetSpeed - this.currentSpeed;
     if (Math.abs(diff) > 0.05) {
-      this.currentSpeed += diff * 0.15;
+      this.currentSpeed += diff * 0.28;
     } else {
       this.currentSpeed = this.targetSpeed;
     }

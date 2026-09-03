@@ -393,62 +393,63 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. Komut Gönderme Fonksiyonları
+  // 6. Komut Gönderme Fonksiyonları (Çift Kanallı: WS + REST API Fallback)
   function applySpeed(speed) {
+    const spd = Math.max(0, parseFloat(speed) || 0);
+
     if (isFleetMode) {
+      fleet.forEach(v => {
+        v.target_speed = Math.min(v.max_speed, spd);
+      });
       if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'set_fleet_speed', speed: speed }));
-      } else {
-        fetch('/api/fleet/speed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ speed: speed })
-        });
+        ws.send(JSON.stringify({ action: 'set_fleet_speed', speed: spd }));
       }
+      fetch('/api/fleet/speed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speed: spd })
+      }).catch(() => {});
     } else {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'set_speed', vehicle_id: selectedVehicleId, speed: speed }));
-      } else {
-        fetch(`/api/vehicle/${selectedVehicleId}/speed`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ speed: speed, mode: 'manual' })
-        });
+      const v = fleet.find(item => item.id === selectedVehicleId);
+      if (v) {
+        v.target_speed = Math.min(v.max_speed, spd);
       }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ action: 'set_speed', vehicle_id: selectedVehicleId, speed: spd }));
+      }
+      fetch(`/api/vehicle/${selectedVehicleId}/speed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ speed: spd, mode: 'manual' })
+      }).catch(() => {});
+    }
+
+    if (speedSliderEl && !speedSliderEl.matches(':active')) {
+      speedSliderEl.value = Math.round(spd);
+      speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
     }
   }
 
-  function applyAccelerate(delta = 10.0) {
-    if (isFleetMode) {
-      const v = fleet.find(item => item.id === selectedVehicleId);
-      const currentTarget = v ? v.target_speed : 90.0;
-      applySpeed(currentTarget + delta);
-    } else {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'accelerate', vehicle_id: selectedVehicleId, delta: delta }));
-      }
-    }
+  function applyAccelerate(delta = 20.0) {
+    const v = fleet.find(item => item.id === selectedVehicleId);
+    const baseSpeed = v ? Math.max(v.current_speed, v.target_speed) : 0;
+    applySpeed(baseSpeed + delta);
   }
 
-  function applyDecelerate(delta = 15.0) {
-    if (isFleetMode) {
-      const v = fleet.find(item => item.id === selectedVehicleId);
-      const currentTarget = v ? v.target_speed : 90.0;
-      applySpeed(Math.max(0, currentTarget - delta));
-    } else {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'decelerate', vehicle_id: selectedVehicleId, delta: delta }));
-      }
-    }
+  function applyDecelerate(delta = 20.0) {
+    const v = fleet.find(item => item.id === selectedVehicleId);
+    const baseSpeed = v ? v.current_speed : 0;
+    applySpeed(Math.max(0, baseSpeed - delta));
   }
 
   function applyFullStop() {
-    if (isFleetMode) {
-      applySpeed(0.0);
-    } else {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'full_stop', vehicle_id: selectedVehicleId }));
-      }
+    applySpeed(0.0);
+    if (!isFleetMode && selectedVehicleId) {
+      fetch(`/api/vehicle/${selectedVehicleId}/brake`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pressed: true })
+      }).catch(() => {});
     }
   }
 

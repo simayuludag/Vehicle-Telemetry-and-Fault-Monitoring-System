@@ -196,8 +196,8 @@ class FleetSimulator:
             if diff > 0:
                 # ⚡ HIZLANMA & GAZ PEDALI
                 speed_ratio = min(1.0, current / max_speed)
-                drag_factor = max(0.12, 1.0 - 0.85 * (speed_ratio ** 1.8))
-                effective_accel = base_accel * drag_factor
+                drag_factor = max(0.25, 1.0 - 0.75 * (speed_ratio ** 1.8))
+                effective_accel = max(18.0, base_accel * 3.2) * drag_factor
 
                 step = effective_accel * dt
                 if diff <= step:
@@ -206,15 +206,15 @@ class FleetSimulator:
                     current += step
 
                 # Gaz pedalı konumu: Talep edilen ivmeyle orantılı
-                v["throttle_pct"] = round(min(100.0, max(25.0, 30.0 + min(70.0, diff * 3.5))), 1)
+                v["throttle_pct"] = round(min(100.0, max(25.0, 35.0 + min(65.0, diff * 3.5))), 1)
                 v["brake_pct"] = 0.0
                 v["brake_pressed"] = False
 
             else:
                 # 🛑 FRENLEME & FREN PEDALI
                 speed_ratio = min(1.0, current / max_speed)
-                brake_factor = 1.0 + 0.4 * speed_ratio
-                effective_brake = (base_accel * 1.8) * brake_factor
+                brake_factor = 1.0 + 0.5 * speed_ratio
+                effective_brake = max(26.0, base_accel * 4.2) * brake_factor
 
                 step = effective_brake * dt
                 if abs(diff) <= step:
