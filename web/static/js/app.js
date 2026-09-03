@@ -68,9 +68,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // Gauge Başlat
   gauge = new window.SpeedGauge('speedGaugeCanvas');
 
-  // Akıllı Görsel Yükleyici (.jpg -> .png -> .webp -> .svg)
-  function setCarImage(imgElement, vehicleId) {
-    const exts = ['.jpg', '.png', '.webp', '.jpeg', '.svg'];
+  // Akıllı Görsel Yükleyici (.png -> .jpg -> .webp -> .svg)
+  function setCarImage(imgElement, vehicleId, explicitUrl = null) {
+    if (!imgElement) return;
+    const v = fleet.find(item => item.id === vehicleId);
+    if (explicitUrl) {
+      imgElement.src = explicitUrl;
+      return;
+    }
+    if (v && v.image_url) {
+      imgElement.src = v.image_url;
+      return;
+    }
+
+    const exts = ['.png', '.jpg', '.webp', '.jpeg', '.svg'];
     let currentExtIdx = 0;
 
     function tryNext() {
@@ -127,6 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           renderFleetGrid();
           updateSelectedVehicleView();
+        } else if (msg.type === 'vehicle_image_updated') {
+          const v = fleet.find(item => item.id === msg.vehicle_id);
+          if (v) v.image_url = msg.image_url;
+          if (selectedVehicleId === msg.vehicle_id && activeVehiclePhotoEl) {
+            activeVehiclePhotoEl.src = msg.image_url;
+          }
         } else if (msg.type === 'telemetry_update') {
           fleet = msg.fleet || [];
           updateFleetGridRealtime();
@@ -525,8 +542,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const data = await res.json();
         if (data.status === 'ok') {
-          activeVehiclePhotoEl.src = `${data.image_url}?t=${Date.now()}`;
-          alert(`✅ Seçili araç için görsel başarıyla güncellendi!`);
+          activeVehiclePhotoEl.src = data.image_url;
+          const v = fleet.find(item => item.id === selectedVehicleId);
+          if (v) v.image_url = data.image_url;
+          alert(`✅ Seçili araç için görsel başarıyla güncellendi ve kalıcı kaydedildi!`);
         } else {
           alert('❌ Görsel yüklenemedi.');
         }

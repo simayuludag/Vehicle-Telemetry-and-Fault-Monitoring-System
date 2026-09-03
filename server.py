@@ -214,22 +214,67 @@ async def brake_vehicle(vehicle_id: str, req: BrakeRequest):
     return {"status": "ok", "vehicle_id": vehicle_id, "brake_pressed": req.pressed}
 
 
+import re
+import time
+
+def sanitize_slug(text: str) -> str:
+    """Türkçe ve özel karakterleri güvenli ASCII ID formatına dönüştürür"""
+    if not text:
+        return ""
+    tr_map = str.maketrans("çğıöşüÇĞİÖŞÜ ", "cgiosuCGIOSU-")
+    clean = text.translate(tr_map).lower()
+    clean = re.sub(r'[^a-z0-9\-]', '', clean)
+    return re.sub(r'-+', '-', clean).strip('-')
+
+
 @app.post("/api/vehicle/{vehicle_id}/upload-image")
 async def upload_vehicle_image(vehicle_id: str, file: UploadFile = File(...)):
-    """Seçili araç için yerel fotoğraf yükleme endpoint'i"""
+    """Seçili araç için fotoğraf yükleme ve tüm sistemde kalıcı güncelleme endpoint'i"""
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
         ext = ".jpg"
     cars_dir = os.path.join(STATIC_DIR, "images", "cars")
     os.makedirs(cars_dir, exist_ok=True)
+
+    # Eski farklı uzantılı dosyaları temizle (çakışmayı önle)
+    for old_ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+        old_file = os.path.join(cars_dir, f"{vehicle_id}{old_ext}")
+        if os.path.exists(old_file) and old_ext != ext:
+            try:
+                os.remove(old_file)
+            except Exception:
+                pass
+
     dest_path = os.path.join(cars_dir, f"{vehicle_id}{ext}")
     with open(dest_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+
+    version_ts = int(time.time())
+    new_image_url = f"/static/images/cars/{vehicle_id}{ext}?v={version_ts}"
+
+    # 1. fleet_data içinde güncelle ve kalıcı kaydet
+    update_vehicle_image_url(vehicle_id, new_image_url)
+
+    # 2. Simulator vehicles_state içinde güncelle
+    if simulator and vehicle_id in simulator.vehicles_state:
+        simulator.vehicles_state[vehicle_id]["image_url"] = new_image_url
+
+    # 3. WebSocket üzerinden canlı güncelleme bildir
+    for ws in connected_websockets:
+        try:
+            await ws.send_json({
+                "type": "vehicle_image_updated",
+                "vehicle_id": vehicle_id,
+                "image_url": new_image_url
+            })
+        except Exception:
+            pass
+
     return {
         "status": "ok",
         "vehicle_id": vehicle_id,
-        "image_url": f"/static/images/cars/{vehicle_id}{ext}",
-        "message": f"{vehicle_id} görseli başarıyla güncellendi."
+        "image_url": new_image_url,
+        "message": f"{vehicle_id} görseli kalıcı olarak güncellendi."
     }
 
 
@@ -243,8 +288,9 @@ async def get_next_sa():
 @app.post("/api/fleet/add-brand")
 async def create_brand(req: BrandCreateRequest):
     """Yeni özel otomobil markası ekler"""
+    brand_slug = sanitize_slug(req.name) or "brand"
     brand_dict = {
-        "id": req.name.lower().strip().replace(" ", "-"),
+        "id": brand_slug,
         "name": req.name.strip(),
         "color": req.color.strip(),
         "country": req.country.strip(),
@@ -272,67 +318,114 @@ async def create_vehicle(
     brand_name: str = Form(...),
     model: str = Form(...),
     category: str = Form("Sedan"),
-    plate: str = Form("34 TGG 100"),
-    engine: str = Form("Elektrik 218 HP"),
+    plate: str = Form("34 NEW 001"),
+    engine: str = Form("2.0L Turbo 200 HP"),
     powertrain: str = Form("ice"),
-    is_ev: bool = Form(False),
-    max_speed: float = Form(220.0),
-    default_speed: float = Form(0.0),
-    source_address: Optional[int] = Form(None),
-    file: Optional[UploadFile] = File(None)
+    is_ev: Optional[str] = Form(None),
+    max_speed: Optional[str] = Form("220.0"),
+    default_speed: Optional[str] = Form("0.0"),
+    source_address: Optional[str] = Form(None),
+    file: Optional[UploadFile] = None
 ):
-    """Yeni araç oluşturur, fotoğrafı kaydeder ve simülatöre dahil eder"""
-    brand_part = brand_id.lower().strip().replace(" ", "-")
-    model_part = model.lower().strip().replace(" ", "-")
-    v_id = f"{brand_part}-{model_part}"
+    """Yeni araç oluşturur, fotoğrafı kaydeder ve simülatöre dahil eder (hataya dayanıklı)"""
+    try:
+        brand_part = sanitize_slug(brand_id) or "car"
+        model_part = sanitize_slug(model) or "model"
+        v_id = f"{brand_part}-{model_part}"
 
-    # Fotoğraf yüklendiyse diske kaydet
-    image_url = f"/static/images/cars/{v_id}.jpg"
-    if file and file.filename:
-        ext = os.path.splitext(file.filename)[1].lower()
-        if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
-            ext = ".jpg"
+        # is_ev güvenli çözümleme
+        is_ev_bool = False
+        if is_ev is not None:
+            if isinstance(is_ev, bool):
+                is_ev_bool = is_ev
+            elif str(is_ev).lower() in ("true", "1", "ev", "yes"):
+                is_ev_bool = True
+        if powertrain == "ev":
+            is_ev_bool = True
+
+        # SA güvenli çözümleme
+        sa_int = None
+        if source_address:
+            try:
+                sa_int = int(str(source_address).strip())
+            except (ValueError, TypeError):
+                sa_int = None
+        if sa_int is None:
+            sa_int = get_next_available_source_address()
+
+        # max_speed ve default_speed
+        try:
+            max_spd_val = float(str(max_speed).replace(",", "."))
+        except (ValueError, TypeError):
+            max_spd_val = 220.0
+
+        try:
+            def_spd_val = float(str(default_speed).replace(",", "."))
+        except (ValueError, TypeError):
+            def_spd_val = 0.0
+
         cars_dir = os.path.join(STATIC_DIR, "images", "cars")
         os.makedirs(cars_dir, exist_ok=True)
-        dest_path = os.path.join(cars_dir, f"{v_id}{ext}")
-        with open(dest_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        image_url = f"/static/images/cars/{v_id}{ext}"
+        version_ts = int(time.time())
 
-    v_data = {
-        "id": v_id,
-        "brand_id": brand_id,
-        "brand_name": brand_name,
-        "model": model,
-        "category": category,
-        "plate": plate,
-        "engine": engine,
-        "powertrain": powertrain,
-        "is_ev": is_ev or powertrain == "ev",
-        "max_speed": max_speed,
-        "default_speed": default_speed,
-        "source_address": source_address,
-        "image_url": image_url
-    }
+        # Fotoğraf yüklendiyse diske kaydet
+        image_url = f"/static/images/cars/{v_id}.jpg?v={version_ts}"
+        if file and file.filename:
+            ext = os.path.splitext(file.filename)[1].lower()
+            if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+                ext = ".jpg"
+            # Eski uzantıları temizle
+            for old_ext in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+                old_file = os.path.join(cars_dir, f"{v_id}{old_ext}")
+                if os.path.exists(old_file) and old_ext != ext:
+                    try:
+                        os.remove(old_file)
+                    except Exception:
+                        pass
 
-    created_v = add_fleet_vehicle(v_data)
+            dest_path = os.path.join(cars_dir, f"{v_id}{ext}")
+            with open(dest_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            image_url = f"/static/images/cars/{v_id}{ext}?v={version_ts}"
 
-    if simulator:
-        simulator.add_vehicle(created_v)
+        v_data = {
+            "id": v_id,
+            "brand_id": brand_id.strip(),
+            "brand_name": brand_name.strip(),
+            "model": model.strip(),
+            "category": category.strip(),
+            "plate": plate.strip(),
+            "engine": engine.strip(),
+            "powertrain": "ev" if is_ev_bool else powertrain,
+            "is_ev": is_ev_bool,
+            "max_speed": max_spd_val,
+            "default_speed": def_spd_val,
+            "source_address": sa_int,
+            "image_url": image_url
+        }
 
-    # WebSocket üzerinden canlı güncelleme bildir
-    for ws in connected_websockets:
-        try:
-            await ws.send_json({
-                "type": "vehicle_added",
-                "vehicle": created_v,
-                "fleet": simulator.get_fleet_summary() if simulator else VEHICLES,
-                "brands": FLEET_BRANDS
-            })
-        except Exception:
-            pass
+        created_v = add_fleet_vehicle(v_data)
 
-    return {"status": "ok", "vehicle": created_v}
+        if simulator:
+            simulator.add_vehicle(created_v)
+
+        # WebSocket üzerinden canlı güncelleme bildir
+        for ws in connected_websockets:
+            try:
+                await ws.send_json({
+                    "type": "vehicle_added",
+                    "vehicle": created_v,
+                    "fleet": simulator.get_fleet_summary() if simulator else VEHICLES,
+                    "brands": FLEET_BRANDS
+                })
+            except Exception:
+                pass
+
+        return {"status": "ok", "vehicle": created_v}
+    except Exception as err:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Araç ekleme hatası: {str(err)}")
 
 
 @app.delete("/api/vehicle/{vehicle_id}")

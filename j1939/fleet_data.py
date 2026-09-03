@@ -847,7 +847,7 @@ def _ensure_custom_data_dir():
 
 
 def _load_custom_fleet():
-    """Disk'teki özel araçları ve markaları yükler"""
+    """Disk'teki özel araçları, markaları ve görsel değişikliklerini yükler"""
     if not os.path.exists(CUSTOM_DATA_FILE):
         return
 
@@ -864,12 +864,18 @@ def _load_custom_fleet():
         for cv in custom_vehicles:
             if not any(v["id"] == cv["id"] for v in VEHICLES):
                 VEHICLES.append(cv)
+
+        # Görsel güncellemelerini uygula
+        image_overrides = data.get("image_overrides", {})
+        for v in VEHICLES:
+            if v["id"] in image_overrides:
+                v["image_url"] = image_overrides[v["id"]]
     except Exception as e:
         print(f"Özel filo verisi yüklenirken hata: {e}")
 
 
 def _save_custom_fleet():
-    """Disk'e özel araçları ve markaları kaydeder"""
+    """Disk'e özel araçları, markaları ve görsel değişikliklerini kaydeder"""
     _ensure_custom_data_dir()
     try:
         # Standart 10 marka harici olanları kaydet
@@ -891,10 +897,30 @@ def _save_custom_fleet():
         }
         custom_vehicles = [v for v in VEHICLES if v["id"] not in default_vehicle_ids]
 
+        # Tüm araçlar için özelleştirilmiş görsel URL'leri topla
+        image_overrides = {}
+        for v in VEHICLES:
+            if v.get("image_url"):
+                image_overrides[v["id"]] = v["image_url"]
+
         with open(CUSTOM_DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump({"brands": custom_brands, "vehicles": custom_vehicles}, f, indent=2, ensure_ascii=False)
+            json.dump({
+                "brands": custom_brands,
+                "vehicles": custom_vehicles,
+                "image_overrides": image_overrides
+            }, f, indent=2, ensure_ascii=False)
     except Exception as e:
         print(f"Özel filo verisi kaydedilirken hata: {e}")
+
+
+def update_vehicle_image_url(vehicle_id: str, new_image_url: str) -> bool:
+    """Belirli bir aracın görsel URL'sini günceller ve kaydeder"""
+    for v in VEHICLES:
+        if v["id"] == vehicle_id:
+            v["image_url"] = new_image_url
+            _save_custom_fleet()
+            return True
+    return False
 
 
 def get_all_vehicles() -> List[Dict[str, Any]]:
