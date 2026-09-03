@@ -297,25 +297,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    // 1. Seçili Aracın Görselini Yükle (.jpg, .png, .webp, .svg otomatik desteklenir)
+    // 1. Seçili Aracın Görselini Yükle
     if (activeVehiclePhotoEl && (forceImageUpdate || lastLoadedVehicleId !== v.id)) {
       lastLoadedVehicleId = v.id;
       setCarImage(activeVehiclePhotoEl, v.id);
       activeVehiclePhotoEl.alt = `${v.brand_name} ${v.model}`;
     }
 
-    if (isFleetMode) {
-      activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
-      activeScopePillEl.style.borderColor = '#f59e0b';
-      activeScopePillEl.style.color = '#f59e0b';
-    } else {
-      activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
-      activeScopePillEl.style.borderColor = '#00d2ff';
-      activeScopePillEl.style.color = '#00d2ff';
+    if (activeScopePillEl) {
+      if (isFleetMode) {
+        activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
+        activeScopePillEl.style.borderColor = '#f59e0b';
+        activeScopePillEl.style.color = '#f59e0b';
+      } else {
+        activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
+        activeScopePillEl.style.borderColor = '#00d2ff';
+        activeScopePillEl.style.color = '#00d2ff';
+      }
     }
 
-    // 2. Hız Kadranı
-    gauge.setSpeed(v.current_speed, v.max_speed);
+    // 2. Hız Kadranı (Cluster Göstergesi)
+    if (gauge) {
+      gauge.setSpeed(v.current_speed, v.max_speed);
+    }
 
     // 3. Gaz Pedalı (SPN 91)
     const throttlePct = v.throttle_pct || 0.0;
@@ -346,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (speedSliderEl && !speedSliderEl.matches(':active')) {
       speedSliderEl.max = v.max_speed;
       speedSliderEl.value = Math.round(v.target_speed);
-      speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
+      if (speedSliderValEl) speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
     }
 
     // 8. J1939 Inspector

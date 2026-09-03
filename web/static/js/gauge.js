@@ -34,8 +34,10 @@ class SpeedGauge {
   }
 
   setSpeed(speed, max = 160.0) {
-    this.targetSpeed = Math.max(0, Math.min(max, speed));
-    this.maxSpeed = max;
+    const numSpeed = parseFloat(speed) || 0.0;
+    const numMax = parseFloat(max) || 220.0;
+    this.targetSpeed = Math.max(0, Math.min(numMax, numSpeed));
+    this.maxSpeed = numMax;
   }
 
   animate() {
