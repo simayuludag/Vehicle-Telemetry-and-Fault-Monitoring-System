@@ -109,6 +109,24 @@ document.addEventListener('DOMContentLoaded', () => {
           renderBrandFilters();
           renderFleetGrid();
           updateSelectedVehicleView();
+        } else if (msg.type === 'vehicle_added') {
+          brands = msg.brands || brands;
+          fleet = msg.fleet || fleet;
+          renderBrandFilters();
+          renderFleetGrid();
+          if (msg.vehicle && msg.vehicle.id) {
+            selectVehicle(msg.vehicle.id);
+          }
+        } else if (msg.type === 'brand_added') {
+          brands = msg.brands || brands;
+          renderBrandFilters();
+        } else if (msg.type === 'vehicle_removed') {
+          fleet = msg.fleet || fleet;
+          if (selectedVehicleId === msg.vehicle_id && fleet.length > 0) {
+            selectedVehicleId = fleet[0].id;
+          }
+          renderFleetGrid();
+          updateSelectedVehicleView();
         } else if (msg.type === 'telemetry_update') {
           fleet = msg.fleet || [];
           updateFleetGridRealtime();
@@ -602,6 +620,178 @@ document.addEventListener('DOMContentLoaded', () => {
     link.click();
     document.body.removeChild(link);
   });
+
+  // 9. YENİ ARAÇ EKLEME MODAL VE FORM YÖNETİMİ
+  const btnOpenAddVehicleModal = document.getElementById('btnOpenAddVehicleModal');
+  const addVehicleModal = document.getElementById('addVehicleModal');
+  const btnCloseModal = document.getElementById('btnCloseModal');
+  const btnCancelModal = document.getElementById('btnCancelModal');
+  const addVehicleForm = document.getElementById('addVehicleForm');
+  const modalBrandSelect = document.getElementById('modalBrandSelect');
+  const newBrandFields = document.getElementById('newBrandFields');
+  const modalNewBrandName = document.getElementById('modalNewBrandName');
+  const modalNewBrandColor = document.getElementById('modalNewBrandColor');
+  const modalModelName = document.getElementById('modalModelName');
+  const modalCategory = document.getElementById('modalCategory');
+  const modalPlate = document.getElementById('modalPlate');
+  const modalEngine = document.getElementById('modalEngine');
+  const modalMaxSpeed = document.getElementById('modalMaxSpeed');
+  const modalSa = document.getElementById('modalSa');
+  const modalCarFile = document.getElementById('modalCarFile');
+
+  async function openAddVehicleModal() {
+    // 1. Sıradaki boş SA adresini çek
+    try {
+      const res = await fetch('/api/fleet/next-sa');
+      const data = await res.json();
+      if (data.status === 'ok') {
+        modalSa.value = `${data.source_address_hex} (${data.source_address})`;
+        modalSa.dataset.sa = data.source_address;
+      }
+    } catch (e) {
+      modalSa.value = '0x1F';
+      modalSa.dataset.sa = 31;
+    }
+
+    // 2. Marka Seçeneklerini Doldur
+    modalBrandSelect.innerHTML = '';
+    brands.forEach(b => {
+      const opt = document.createElement('option');
+      opt.value = b.id;
+      opt.textContent = `${b.name} (${b.country || 'Global'})`;
+      modalBrandSelect.appendChild(opt);
+    });
+
+    const newBrandOpt = document.createElement('option');
+    newBrandOpt.value = '__new__';
+    newBrandOpt.textContent = '➕ + Yeni Marka Ekle...';
+    newBrandOpt.style.fontWeight = 'bold';
+    newBrandOpt.style.color = '#00d2ff';
+    modalBrandSelect.appendChild(newBrandOpt);
+
+    newBrandFields.style.display = 'none';
+    addVehicleModal.style.display = 'flex';
+  }
+
+  function closeAddVehicleModal() {
+    addVehicleModal.style.display = 'none';
+    addVehicleForm.reset();
+  }
+
+  if (btnOpenAddVehicleModal) {
+    btnOpenAddVehicleModal.addEventListener('click', openAddVehicleModal);
+  }
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener('click', closeAddVehicleModal);
+  }
+  if (btnCancelModal) {
+    btnCancelModal.addEventListener('click', closeAddVehicleModal);
+  }
+
+  // Backdrop'a tıklandığında kapat
+  if (addVehicleModal) {
+    addVehicleModal.addEventListener('click', (e) => {
+      if (e.target === addVehicleModal) {
+        closeAddVehicleModal();
+      }
+    });
+  }
+
+  if (modalBrandSelect) {
+    modalBrandSelect.addEventListener('change', () => {
+      if (modalBrandSelect.value === '__new__') {
+        newBrandFields.style.display = 'flex';
+        modalNewBrandName.focus();
+      } else {
+        newBrandFields.style.display = 'none';
+      }
+    });
+  }
+
+  if (addVehicleForm) {
+    addVehicleForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      let brandId = modalBrandSelect.value;
+      let brandName = '';
+
+      if (brandId === '__new__') {
+        const customName = modalNewBrandName.value.trim();
+        if (!customName) {
+          alert('Lütfen yeni marka adını girin!');
+          return;
+        }
+        const customColor = modalNewBrandColor.value || '#00d2ff';
+
+        // 1. Yeni Markayı Kaydet
+        try {
+          const brandRes = await fetch('/api/fleet/add-brand', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: customName, color: customColor })
+          });
+          const brandData = await brandRes.json();
+          if (brandData.status === 'ok') {
+            brandId = brandData.brand.id;
+            brandName = brandData.brand.name;
+          }
+        } catch (err) {
+          alert('Yeni marka eklenirken hata oluştu.');
+          return;
+        }
+      } else {
+        const found = brands.find(b => b.id === brandId);
+        brandName = found ? found.name : brandId.toUpperCase();
+      }
+
+      const model = modalModelName.value.trim();
+      const category = modalCategory.value;
+      const plate = modalPlate.value.trim() || '34 NEW 001';
+      const engine = modalEngine.value.trim() || '2.0L Turbo 200 HP';
+      const maxSpeed = parseFloat(modalMaxSpeed.value) || 220;
+      const sa = parseInt(modalSa.dataset.sa) || null;
+
+      const formData = new FormData();
+      formData.append('brand_id', brandId);
+      formData.append('brand_name', brandName);
+      formData.append('model', model);
+      formData.append('category', category);
+      formData.append('plate', plate);
+      formData.append('engine', engine);
+      formData.append('max_speed', maxSpeed);
+      formData.append('default_speed', 0);
+      if (sa) formData.append('source_address', sa);
+
+      if (modalCarFile.files && modalCarFile.files[0]) {
+        formData.append('file', modalCarFile.files[0]);
+      }
+
+      try {
+        const res = await fetch('/api/fleet/add-vehicle', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (data.status === 'ok') {
+          closeAddVehicleModal();
+          alert(`✅ ${brandName} ${model} başarıyla filoya eklendi ve J1939 CAN Bus ağına dahil edildi!`);
+          
+          // Listeyi anında yenile ve yeni aracı seç
+          if (!fleet.some(v => v.id === data.vehicle.id)) {
+            fleet.push(data.vehicle);
+          }
+          renderBrandFilters();
+          renderFleetGrid();
+          selectVehicle(data.vehicle.id);
+        } else {
+          alert('❌ Araç eklenemedi.');
+        }
+      } catch (err) {
+        console.error('Araç ekleme hatası:', err);
+        alert('❌ Araç eklenirken sunucu hatası oluştu.');
+      }
+    });
+  }
 
   initWebSocket();
 });

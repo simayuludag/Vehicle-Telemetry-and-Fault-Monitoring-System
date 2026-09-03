@@ -137,6 +137,19 @@ class FleetSimulator:
                 v["target_speed"] = 0.0
                 v["simulation_mode"] = "manual"
 
+    def add_vehicle(self, vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Çalışma zamanında simülatöre yeni araç ekler"""
+        v = copy.deepcopy(vehicle_data)
+        self.vehicles_state[v["id"]] = v
+        return v
+
+    def remove_vehicle(self, vehicle_id: str) -> bool:
+        """Çalışma zamanında simülatörden araç çıkarır"""
+        if vehicle_id in self.vehicles_state:
+            del self.vehicles_state[vehicle_id]
+            return True
+        return False
+
     def _calculate_gear(self, current_speed: float, is_ev: bool) -> str:
         """Hıza ve aktarma organına göre vites hesaplar"""
         if is_ev:

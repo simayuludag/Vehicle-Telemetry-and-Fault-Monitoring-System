@@ -13,8 +13,8 @@ from j1939.fleet_data import (
 
 
 def test_fleet_brands_count_and_structure():
-    """10 Binek ve SUV Markasının eksiksiz ve doğru veri yapısında olduğunu doğrular"""
-    assert len(FLEET_BRANDS) == 10
+    """Temel 10 Binek ve SUV Markasının eksiksiz ve doğru veri yapısında olduğunu doğrular"""
+    assert len(FLEET_BRANDS) >= 10
 
     brand_ids = set()
     for b in FLEET_BRANDS:
@@ -29,17 +29,21 @@ def test_fleet_brands_count_and_structure():
         "bmw", "mercedes", "audi", "volkswagen", "toyota",
         "tesla", "ford", "renault", "hyundai", "fiat"
     }
-    assert brand_ids == expected_brands
+    assert expected_brands.issubset(brand_ids)
 
 
 def test_vehicles_count_and_per_brand_distribution():
-    """Toplam 30 araç olduğunu ve her markada tam 3 model bulunduğunu doğrular"""
+    """Toplam en az 30 araç olduğunu ve standart 10 markanın her birinde en az 3 model bulunduğunu doğrular"""
     vehicles = get_all_vehicles()
-    assert len(vehicles) == 30
+    assert len(vehicles) >= 30
 
-    for b in FLEET_BRANDS:
-        models = get_vehicles_by_brand(b["id"])
-        assert len(models) == 3, f"{b['name']} markasında 3 model olmalı, bulunan: {len(models)}"
+    expected_brands = [
+        "bmw", "mercedes", "audi", "volkswagen", "toyota",
+        "tesla", "ford", "renault", "hyundai", "fiat"
+    ]
+    for b_id in expected_brands:
+        models = get_vehicles_by_brand(b_id)
+        assert len(models) >= 3, f"{b_id} markasında en az 3 model olmalı, bulunan: {len(models)}"
 
 
 def test_unique_source_addresses():

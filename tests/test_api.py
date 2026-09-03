@@ -28,7 +28,7 @@ def test_api_get_brands(client):
     response = client.get("/api/brands")
     assert response.status_code == 200
     brands = response.json()
-    assert len(brands) == 10
+    assert len(brands) >= 10
     brand_names = [b["name"] for b in brands]
     assert "BMW" in brand_names
     assert "Mercedes-Benz" in brand_names
@@ -120,9 +120,67 @@ def test_index_and_control_pages_served(client):
     assert res_index.status_code == 200
     assert "J1939" in res_index.text
     assert "speedGaugeCanvas" in res_index.text
+    assert "btnOpenAddVehicleModal" in res_index.text
 
     # Ortam 1 (Control)
     res_control = client.get("/control")
     assert res_control.status_code == 200
     assert "Sinyal Gönderici" in res_control.text
     assert "mainSpeedSlider" in res_control.text
+
+
+def test_api_dynamic_brand_and_vehicle_management(client):
+    """Dinamik marka ve araç ekleme, simülatöre dahil etme ve silme testi"""
+    # 1. Sıradaki boş SA adresini al
+    res_sa = client.get("/api/fleet/next-sa")
+    assert res_sa.status_code == 200
+    next_sa = res_sa.json()["source_address"]
+    assert isinstance(next_sa, int)
+
+    # 2. Yeni özel marka ekle (Örn: TOGG)
+    res_brand = client.post("/api/fleet/add-brand", json={
+        "name": "TOGG",
+        "color": "#00A8E8",
+        "country": "Türkiye"
+    })
+    assert res_brand.status_code == 200
+    brand_data = res_brand.json()["brand"]
+    assert brand_data["name"] == "TOGG"
+    assert brand_data["id"] == "togg"
+
+    # 3. Yeni araç ekle
+    form_data = {
+        "brand_id": "togg",
+        "brand_name": "TOGG",
+        "model": "T10X V2 Long Range",
+        "category": "C-SUV",
+        "plate": "34 TGG 100",
+        "engine": "Elektrik 218 HP",
+        "max_speed": "185.0",
+        "default_speed": "0.0",
+        "source_address": str(next_sa)
+    }
+    res_veh = client.post("/api/fleet/add-vehicle", data=form_data)
+    assert res_veh.status_code == 200
+    new_v = res_veh.json()["vehicle"]
+    assert new_v["id"] == "togg-t10x-v2-long-range"
+    assert new_v["source_address"] == next_sa
+    assert new_v["brand_name"] == "TOGG"
+
+    # 4. Aracın filoda ve simülatörde olduğunu doğrula
+    res_get = client.get(f"/api/vehicle/{new_v['id']}")
+    assert res_get.status_code == 200
+    assert res_get.json()["plate"] == "34 TGG 100"
+
+    # 5. Yeni aracın hızını güncelle
+    res_spd = client.post(f"/api/vehicle/{new_v['id']}/speed", json={"speed": 120.0})
+    assert res_spd.status_code == 200
+    assert res_spd.json()["target_speed"] == 120.0
+
+    # 6. Silme testi
+    res_del = client.delete(f"/api/vehicle/{new_v['id']}")
+    assert res_del.status_code == 200
+
+    # 7. Silindiğini doğrula
+    res_404 = client.get(f"/api/vehicle/{new_v['id']}")
+    assert res_404.status_code == 404

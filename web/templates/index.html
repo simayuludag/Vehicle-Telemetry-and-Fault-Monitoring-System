@@ -333,7 +333,10 @@
     </div>
 
     <!-- Header Actions -->
-    <div class="header-actions">
+    <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
+      <button class="btn-add-vehicle" id="btnOpenAddVehicleModal" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; font-family: 'Chakra Petch', sans-serif; font-size: 0.82rem; font-weight: 700; padding: 8px 16px; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); transition: all 0.2s ease;">
+        ➕ YENİ ARAÇ EKLE
+      </button>
       <button class="btn-emergency-stop" id="btnEmergencyStop" title="Tüm Filoyu Kademeli Durdur">
         🛑 TÜMÜNÜ DURDUR
       </button>
@@ -598,8 +601,107 @@
     </p>
   </footer>
 
+  <!-- YENİ ARAÇ EKLEME MODAL FORMU (GLASSMORPHISM POPUP) -->
+  <div class="modal-backdrop" id="addVehicleModal" style="display: none; position: fixed; inset: 0; background: rgba(7, 9, 14, 0.85); backdrop-filter: blur(12px); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="modal-card" style="background: #0d121d; border: 1px solid rgba(0, 210, 255, 0.35); border-radius: 16px; width: 100%; max-width: 560px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9); overflow: hidden; display: flex; flex-direction: column;">
+      
+      <!-- Modal Başlık -->
+      <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; background: rgba(0, 210, 255, 0.06);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.3rem;">🚗</span>
+          <h3 style="font-family: 'Chakra Petch', sans-serif; font-size: 1.15rem; font-weight: 700; color: #f0f4fc; margin: 0;">Filoya Yeni Araç Ekle</h3>
+        </div>
+        <button id="btnCloseModal" type="button" style="background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Modal Form Gövdesi -->
+      <form id="addVehicleForm" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto;">
+        
+        <!-- Marka Seçimi -->
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Otomobil Markası *</label>
+          <select id="modalBrandSelect" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-family: inherit; font-size: 0.88rem; outline: none;">
+            <!-- Dinamik doldurulacak -->
+          </select>
+        </div>
+
+        <!-- Yeni Marka Detayları (Sadece Yeni Marka Ekle seçildiğinde görünür) -->
+        <div id="newBrandFields" style="display: none; background: rgba(0, 210, 255, 0.04); border: 1px dashed rgba(0, 210, 255, 0.3); border-radius: 8px; padding: 12px; gap: 10px; flex-direction: column;">
+          <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px;">
+            <div>
+              <label style="display: block; font-size: 0.74rem; color: #00d2ff; margin-bottom: 4px;">Yeni Marka Adı (Örn: TOGG, Porsche)</label>
+              <input type="text" id="modalNewBrandName" placeholder="Marka adı..." style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.84rem; box-sizing: border-box;">
+            </div>
+            <div>
+              <label style="display: block; font-size: 0.74rem; color: #00d2ff; margin-bottom: 4px;">Marka Rengi</label>
+              <input type="color" id="modalNewBrandColor" value="#00d2ff" style="width: 100%; height: 35px; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; cursor: pointer; padding: 2px; box-sizing: border-box;">
+            </div>
+          </div>
+        </div>
+
+        <!-- Model Adı ve Kategori -->
+        <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Model Adı *</label>
+            <input type="text" id="modalModelName" required placeholder="Örn: T10X V2 Long Range" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-size: 0.88rem; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Kategori</label>
+            <select id="modalCategory" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-size: 0.88rem;">
+              <option value="C-SUV">C-SUV</option>
+              <option value="D-SUV">D-SUV</option>
+              <option value="Sedan">Sedan</option>
+              <option value="Elektrikli EV">Elektrikli EV</option>
+              <option value="Coupe">Coupe</option>
+              <option value="Süper Spor">Süper Spor</option>
+              <option value="Hot Hatch">Hot Hatch</option>
+              <option value="Ticari">Ticari</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Plaka ve Motor -->
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Plaka</label>
+            <input type="text" id="modalPlate" placeholder="34 TGG 100" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Motor / Güç</label>
+            <input type="text" id="modalEngine" placeholder="Örn: Dual Motor 435 HP" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-size: 0.88rem; box-sizing: border-box;">
+          </div>
+        </div>
+
+        <!-- Maksimum Hız ve J1939 SA -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Maksimum Hız (km/h)</label>
+            <input type="number" id="modalMaxSpeed" min="60" max="450" value="210" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 9px 12px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; box-sizing: border-box;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">J1939 Source Address (SA)</label>
+            <input type="text" id="modalSa" readonly title="Otomatik Benzersiz J1939 Adresi" style="width: 100%; background: #07090e; border: 1px solid rgba(0, 210, 255, 0.25); border-radius: 8px; padding: 9px 12px; color: #00d2ff; font-family: 'JetBrains Mono', monospace; font-size: 0.88rem; box-sizing: border-box; cursor: not-allowed;">
+          </div>
+        </div>
+
+        <!-- Araç Fotoğrafı Yükleme -->
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Araç Fotoğrafı (.jpg / .png / .webp)</label>
+          <input type="file" id="modalCarFile" accept="image/jpeg, image/png, image/webp" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 8px; color: #94a3b8; font-size: 0.84rem; box-sizing: border-box;">
+        </div>
+
+        <!-- Form Butonları -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <button type="button" id="btnCancelModal" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #f0f4fc; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">İptal</button>
+          <button type="submit" id="btnSubmitAddVehicle" style="background: linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%); border: none; color: #07090e; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 9px 24px; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);">🚗 FİLOYA EKLE</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
   <!-- Scripts -->
-  <script src="/static/js/gauge.js?v=5.0"></script>
-  <script src="/static/js/app.js?v=5.0"></script>
+  <script src="/static/js/gauge.js?v=6.0"></script>
+  <script src="/static/js/app.js?v=6.0"></script>
 </body>
 </html>

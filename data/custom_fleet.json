@@ -1,0 +1,13 @@
+{
+  "brands": [
+    {
+      "id": "togg",
+      "name": "TOGG",
+      "country": "Türkiye",
+      "color": "#00A8E8",
+      "badge": "TOGG",
+      "accent": "rgba(0, 210, 255, 0.2)"
+    }
+  ],
+  "vehicles": []
+}

@@ -834,8 +834,71 @@ VEHICLES: List[Dict[str, Any]] = [
 ]
 
 
+import os
+import json
+import copy
+
+CUSTOM_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+CUSTOM_DATA_FILE = os.path.join(CUSTOM_DATA_DIR, "custom_fleet.json")
+
+
+def _ensure_custom_data_dir():
+    os.makedirs(CUSTOM_DATA_DIR, exist_ok=True)
+
+
+def _load_custom_fleet():
+    """Disk'teki özel araçları ve markaları yükler"""
+    if not os.path.exists(CUSTOM_DATA_FILE):
+        return
+
+    try:
+        with open(CUSTOM_DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        custom_brands = data.get("brands", [])
+        for cb in custom_brands:
+            if not any(b["id"] == cb["id"] for b in FLEET_BRANDS):
+                FLEET_BRANDS.append(cb)
+
+        custom_vehicles = data.get("vehicles", [])
+        for cv in custom_vehicles:
+            if not any(v["id"] == cv["id"] for v in VEHICLES):
+                VEHICLES.append(cv)
+    except Exception as e:
+        print(f"Özel filo verisi yüklenirken hata: {e}")
+
+
+def _save_custom_fleet():
+    """Disk'e özel araçları ve markaları kaydeder"""
+    _ensure_custom_data_dir()
+    try:
+        # Standart 10 marka harici olanları kaydet
+        default_brand_ids = {"bmw", "mercedes", "audi", "volkswagen", "toyota", "tesla", "ford", "renault", "hyundai", "fiat"}
+        custom_brands = [b for b in FLEET_BRANDS if b["id"] not in default_brand_ids]
+
+        # Standart 30 araç harici olanları kaydet
+        default_vehicle_ids = {
+            "bmw-320i", "bmw-520d", "bmw-m4-competition",
+            "mb-c200", "mb-e300d", "mb-g63-amg",
+            "audi-a3-sedan", "audi-a6-avant", "audi-rs6-avant",
+            "vw-golf-8", "vw-passat-variant", "vw-tiguan-rline",
+            "toyota-corolla-hybrid", "toyota-rav4-hybrid", "toyota-yaris-cross",
+            "tesla-model-3-perf", "tesla-model-y-longrange", "tesla-model-s-plaid",
+            "ford-focus-st", "ford-mustang-gt", "ford-ranger-raptor",
+            "renault-clio-5", "renault-megane-etech", "renault-austral",
+            "hyundai-i20-n", "hyundai-tucson-hybrid", "hyundai-ioniq-5",
+            "fiat-egea-cross", "fiat-500e", "fiat-doblo-combi"
+        }
+        custom_vehicles = [v for v in VEHICLES if v["id"] not in default_vehicle_ids]
+
+        with open(CUSTOM_DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump({"brands": custom_brands, "vehicles": custom_vehicles}, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Özel filo verisi kaydedilirken hata: {e}")
+
+
 def get_all_vehicles() -> List[Dict[str, Any]]:
-    """Tüm 30 binek ve ticari aracın listesini döndürür"""
+    """Tüm binek ve ticari araçların listesini döndürür"""
     return VEHICLES
 
 
@@ -848,5 +911,103 @@ def get_vehicle_by_id(vehicle_id: str) -> Dict[str, Any]:
 
 
 def get_vehicles_by_brand(brand_id: str) -> List[Dict[str, Any]]:
-    """Belirli bir markaya ait 3 modeli döndürür"""
+    """Belirli bir markaya ait modelleri döndürür"""
     return [v for v in VEHICLES if v["brand_id"] == brand_id]
+
+
+def get_next_available_source_address() -> int:
+    """Kullanılmayan bir sonraki benzersiz J1939 Source Address (SA) döndürür"""
+    used_sas = {v["source_address"] for v in VEHICLES}
+    for candidate in range(0x01, 0xEE):
+        if candidate not in used_sas:
+            return candidate
+    return 0xEE
+
+
+def add_brand(brand_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Yeni bir marka ekler"""
+    brand_id = brand_data["id"].lower().strip().replace(" ", "-")
+    for b in FLEET_BRANDS:
+        if b["id"] == brand_id:
+            return b
+
+    new_brand = {
+        "id": brand_id,
+        "name": brand_data.get("name", brand_id.upper()),
+        "country": brand_data.get("country", "Global"),
+        "color": brand_data.get("color", "#00D2FF"),
+        "badge": brand_data.get("badge", brand_id[:4].upper()),
+        "accent": f"rgba(0, 210, 255, 0.2)",
+    }
+    FLEET_BRANDS.append(new_brand)
+    _save_custom_fleet()
+    return new_brand
+
+
+def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Filoya yeni bir araç ekler ve kalıcı kaydeder"""
+    v_id = vehicle_data.get("id")
+    if not v_id:
+        brand_part = vehicle_data.get("brand_id", "car").lower().strip().replace(" ", "-")
+        model_part = vehicle_data.get("model", "model").lower().strip().replace(" ", "-")
+        v_id = f"{brand_part}-{model_part}"
+
+    # Çakışma varsa benzersiz yap
+    original_id = v_id
+    counter = 1
+    while any(v["id"] == v_id for v in VEHICLES):
+        v_id = f"{original_id}-{counter}"
+        counter += 1
+
+    sa = vehicle_data.get("source_address")
+    if sa is None:
+        sa = get_next_available_source_address()
+    else:
+        sa = int(sa)
+
+    max_spd = float(vehicle_data.get("max_speed", 220.0))
+    def_spd = float(vehicle_data.get("default_speed", 0.0))
+
+    new_vehicle = {
+        "id": v_id,
+        "brand_id": vehicle_data.get("brand_id", "custom").lower().strip(),
+        "brand_name": vehicle_data.get("brand_name", "Özel Marka"),
+        "model": vehicle_data.get("model", "Özel Model"),
+        "category": vehicle_data.get("category", "Binek"),
+        "plate": vehicle_data.get("plate", "34 CUSTOM 001"),
+        "source_address": sa,
+        "engine": vehicle_data.get("engine", "2.0L Turbo 200 HP"),
+        "max_speed": max_spd,
+        "default_speed": def_spd,
+        "current_speed": def_spd,
+        "target_speed": def_spd,
+        "acceleration_rate": float(vehicle_data.get("acceleration_rate", 6.0)),
+        "throttle_pct": 0.0,
+        "brake_pct": 0.0,
+        "gear": "P" if def_spd == 0 else "D1",
+        "battery_soc": float(vehicle_data.get("battery_soc", 95.0)),
+        "battery_soh": float(vehicle_data.get("battery_soh", 99.0)),
+        "image_url": vehicle_data.get("image_url", f"/static/images/cars/{v_id}.jpg"),
+        "status": "stopped" if def_spd == 0 else "cruising",
+        "simulation_mode": "manual",
+        "brake_pressed": False,
+    }
+
+    VEHICLES.append(new_vehicle)
+    _save_custom_fleet()
+    return new_vehicle
+
+
+def delete_vehicle(vehicle_id: str) -> bool:
+    """Filodan bir aracı siler"""
+    global VEHICLES
+    initial_len = len(VEHICLES)
+    VEHICLES = [v for v in VEHICLES if v["id"] != vehicle_id]
+    if len(VEHICLES) < initial_len:
+        _save_custom_fleet()
+        return True
+    return False
+
+
+# Başlangıçta kaydedilmiş özel araçları yükle
+_load_custom_fleet()

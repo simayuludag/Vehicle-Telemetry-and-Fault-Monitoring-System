@@ -8,23 +8,46 @@ import asyncio
 import os
 import shutil
 from contextlib import asynccontextmanager
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from can_bridge import CANBridge
-from j1939.fleet_data import FLEET_BRANDS, VEHICLES, get_all_vehicles, get_vehicle_by_id
+from j1939.fleet_data import (
+    FLEET_BRANDS, VEHICLES, get_all_vehicles, get_vehicle_by_id,
+    add_vehicle as add_fleet_vehicle, add_brand as add_fleet_brand,
+    delete_vehicle as delete_fleet_vehicle, get_next_available_source_address
+)
 from j1939.simulator import FleetSimulator
 
 # Global instance'lar
 can_bridge: CANBridge = None
 simulator: FleetSimulator = None
 connected_websockets: List[WebSocket] = []
+
+
+class BrandCreateRequest(BaseModel):
+    name: str = Field(..., description="Marka adı (örn: TOGG, Porsche, Ferrari)")
+    color: str = Field(default="#00D2FF", description="Marka tema rengi hex kodu")
+    country: str = Field(default="Global", description="Ülke")
+
+
+class VehicleCreateRequest(BaseModel):
+    brand_id: str = Field(..., description="Marka ID (örn: bmw, togg, porsche)")
+    brand_name: str = Field(..., description="Marka Adı (örn: BMW, TOGG)")
+    model: str = Field(..., description="Model adı (örn: T10X V2 Long Range)")
+    category: str = Field(default="Sedan", description="Kategori (Sedan, SUV, EV, Coupe, Spor)")
+    plate: str = Field(default="34 TGG 100", description="Plaka")
+    engine: str = Field(default="Elektrik 218 HP", description="Motor / Güç")
+    max_speed: float = Field(default=220.0, ge=50.0, le=450.0, description="Maksimum hız (km/h)")
+    default_speed: float = Field(default=0.0, ge=0.0, le=250.0, description="Başlangıç hızı (km/h)")
+    source_address: int = Field(default=None, description="J1939 Source Address (boşsa otomatik)")
+    image_url: str = Field(default=None, description="Görsel URL veya yerel yol")
 
 
 class SpeedUpdateRequest(BaseModel):
@@ -208,6 +231,128 @@ async def upload_vehicle_image(vehicle_id: str, file: UploadFile = File(...)):
         "image_url": f"/static/images/cars/{vehicle_id}{ext}",
         "message": f"{vehicle_id} görseli başarıyla güncellendi."
     }
+
+
+@app.get("/api/fleet/next-sa")
+async def get_next_sa():
+    """Boşta olan bir sonraki benzersiz J1939 Source Address'i döndürür"""
+    sa = get_next_available_source_address()
+    return {"status": "ok", "source_address": sa, "source_address_hex": f"0x{sa:02X}"}
+
+
+@app.post("/api/fleet/add-brand")
+async def create_brand(req: BrandCreateRequest):
+    """Yeni özel otomobil markası ekler"""
+    brand_dict = {
+        "id": req.name.lower().strip().replace(" ", "-"),
+        "name": req.name.strip(),
+        "color": req.color.strip(),
+        "country": req.country.strip(),
+        "badge": req.name[:4].upper()
+    }
+    created = add_fleet_brand(brand_dict)
+
+    # WebSocket üzerinden tüm istemcilere bildir
+    for ws in connected_websockets:
+        try:
+            await ws.send_json({
+                "type": "brand_added",
+                "brand": created,
+                "brands": FLEET_BRANDS
+            })
+        except Exception:
+            pass
+
+    return {"status": "ok", "brand": created}
+
+
+@app.post("/api/fleet/add-vehicle")
+async def create_vehicle(
+    brand_id: str = Form(...),
+    brand_name: str = Form(...),
+    model: str = Form(...),
+    category: str = Form("Sedan"),
+    plate: str = Form("34 TGG 100"),
+    engine: str = Form("Elektrik 218 HP"),
+    max_speed: float = Form(220.0),
+    default_speed: float = Form(0.0),
+    source_address: Optional[int] = Form(None),
+    file: Optional[UploadFile] = File(None)
+):
+    """Yeni araç oluşturur, fotoğrafı kaydeder ve simülatöre dahil eder"""
+    brand_part = brand_id.lower().strip().replace(" ", "-")
+    model_part = model.lower().strip().replace(" ", "-")
+    v_id = f"{brand_part}-{model_part}"
+
+    # Fotoğraf yüklendiyse diske kaydet
+    image_url = f"/static/images/cars/{v_id}.jpg"
+    if file and file.filename:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in [".jpg", ".jpeg", ".png", ".webp", ".svg"]:
+            ext = ".jpg"
+        cars_dir = os.path.join(STATIC_DIR, "images", "cars")
+        os.makedirs(cars_dir, exist_ok=True)
+        dest_path = os.path.join(cars_dir, f"{v_id}{ext}")
+        with open(dest_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        image_url = f"/static/images/cars/{v_id}{ext}"
+
+    v_data = {
+        "id": v_id,
+        "brand_id": brand_id,
+        "brand_name": brand_name,
+        "model": model,
+        "category": category,
+        "plate": plate,
+        "engine": engine,
+        "max_speed": max_speed,
+        "default_speed": default_speed,
+        "source_address": source_address,
+        "image_url": image_url
+    }
+
+    created_v = add_fleet_vehicle(v_data)
+
+    if simulator:
+        simulator.add_vehicle(created_v)
+
+    # WebSocket üzerinden canlı güncelleme bildir
+    for ws in connected_websockets:
+        try:
+            await ws.send_json({
+                "type": "vehicle_added",
+                "vehicle": created_v,
+                "fleet": simulator.get_fleet_summary() if simulator else VEHICLES,
+                "brands": FLEET_BRANDS
+            })
+        except Exception:
+            pass
+
+    return {"status": "ok", "vehicle": created_v}
+
+
+@app.delete("/api/vehicle/{vehicle_id}")
+async def remove_vehicle_endpoint(vehicle_id: str):
+    """Filodan bir aracı siler"""
+    deleted = delete_fleet_vehicle(vehicle_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Araç bulunamadı")
+
+    if simulator:
+        simulator.remove_vehicle(vehicle_id)
+
+    # WebSocket yayını
+    for ws in connected_websockets:
+        try:
+            await ws.send_json({
+                "type": "vehicle_removed",
+                "vehicle_id": vehicle_id,
+                "fleet": simulator.get_fleet_summary() if simulator else VEHICLES
+            })
+        except Exception:
+            pass
+
+    return {"status": "ok", "message": f"{vehicle_id} başarıyla silindi."}
 
 
 @app.post("/api/fleet/speed")
