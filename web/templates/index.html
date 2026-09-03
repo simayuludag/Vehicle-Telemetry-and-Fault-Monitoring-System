@@ -660,6 +660,25 @@
           </div>
         </div>
 
+        <!-- Güç / Aktarma Organı (Elektrikli EV / Benzin-Dizel / Hibrit) -->
+        <div>
+          <label style="display: block; font-size: 0.78rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">🔋 Güç & Motor Tipi (Elektrikli mi?) *</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <label style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #131b2a; border: 1px solid rgba(0, 210, 255, 0.35); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #f0f4fc;">
+              <input type="radio" name="modalPowertrain" value="ev" style="accent-color: #00d2ff;">
+              <span>⚡ %100 Elektrikli (EV)</span>
+            </label>
+            <label style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #f0f4fc;">
+              <input type="radio" name="modalPowertrain" value="ice" checked style="accent-color: #f59e0b;">
+              <span>⛽ Benzin / Dizel</span>
+            </label>
+            <label style="display: flex; align-items: center; justify-content: center; gap: 6px; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 8px; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #f0f4fc;">
+              <input type="radio" name="modalPowertrain" value="hybrid" style="accent-color: #10b981;">
+              <span>🌿 Hibrit (HEV)</span>
+            </label>
+          </div>
+        </div>
+
         <!-- Plaka ve Motor -->
         <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 12px;">
           <div>

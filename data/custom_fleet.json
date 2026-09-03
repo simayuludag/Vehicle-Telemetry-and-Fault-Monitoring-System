@@ -7,7 +7,40 @@
       "color": "#00A8E8",
       "badge": "TOGG",
       "accent": "rgba(0, 210, 255, 0.2)"
+    },
+    {
+      "id": "ısuzu",
+      "name": "ısuzu",
+      "country": "Global",
+      "color": "#00d2ff",
+      "badge": "ISUZ",
+      "accent": "rgba(0, 210, 255, 0.2)"
     }
   ],
-  "vehicles": []
+  "vehicles": [
+    {
+      "id": "ısuzu-npr-long",
+      "brand_id": "ısuzu",
+      "brand_name": "ısuzu",
+      "model": "NPR LONG",
+      "category": "Ticari",
+      "plate": "41 SU 067",
+      "source_address": 31,
+      "engine": "2.0L Turbo 200 HP",
+      "max_speed": 100.0,
+      "default_speed": 0.0,
+      "current_speed": 0.0,
+      "target_speed": 0.0,
+      "acceleration_rate": 6.0,
+      "throttle_pct": 0.0,
+      "brake_pct": 0.0,
+      "gear": "P",
+      "battery_soc": 95.0,
+      "battery_soh": 99.0,
+      "image_url": "/static/images/cars/ısuzu-npr-long.jpg",
+      "status": "stopped",
+      "simulation_mode": "manual",
+      "brake_pressed": false
+    }
+  ]
 }

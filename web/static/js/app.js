@@ -708,6 +708,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Güç Tipi (Elektrikli EV vs Benzin vs Hibrit) Değiştiğinde Alanları Güncelle
+  document.querySelectorAll('input[name="modalPowertrain"]').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'ev') {
+        modalEngine.placeholder = 'Örn: Çift Motor 435 HP Elektrik';
+        if (modalCategory.value === 'Sedan') modalCategory.value = 'Elektrikli EV';
+      } else if (val === 'hybrid') {
+        modalEngine.placeholder = 'Örn: 2.0L Tam Hibrit 197 HP';
+      } else {
+        modalEngine.placeholder = 'Örn: 2.0L Turbo Benzin 245 HP';
+      }
+    });
+  });
+
   if (addVehicleForm) {
     addVehicleForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -751,6 +766,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const maxSpeed = parseFloat(modalMaxSpeed.value) || 220;
       const sa = parseInt(modalSa.dataset.sa) || null;
 
+      // Güç & Aktarma Organı (Elektrikli mi?)
+      const ptRadio = document.querySelector('input[name="modalPowertrain"]:checked');
+      const powertrain = ptRadio ? ptRadio.value : 'ice';
+      const isEv = (powertrain === 'ev');
+
       const formData = new FormData();
       formData.append('brand_id', brandId);
       formData.append('brand_name', brandName);
@@ -758,6 +778,8 @@ document.addEventListener('DOMContentLoaded', () => {
       formData.append('category', category);
       formData.append('plate', plate);
       formData.append('engine', engine);
+      formData.append('powertrain', powertrain);
+      formData.append('is_ev', isEv);
       formData.append('max_speed', maxSpeed);
       formData.append('default_speed', 0);
       if (sa) formData.append('source_address', sa);

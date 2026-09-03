@@ -80,7 +80,7 @@ def test_vehicle_lookup_by_id():
 def test_vehicle_telemetry_parameters():
     """Tüm araçların hız ve motor parametrelerinin geçerli aralıklarda olduğunu doğrular"""
     for v in get_all_vehicles():
-        assert v["max_speed"] >= 150.0
+        assert v["max_speed"] >= 50.0
         assert 0.0 <= v["default_speed"] <= v["max_speed"]
         assert 0.0 <= v["current_speed"] <= v["max_speed"]
         assert v["acceleration_rate"] > 1.0

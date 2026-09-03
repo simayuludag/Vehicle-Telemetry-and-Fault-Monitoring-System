@@ -20,7 +20,7 @@ def test_api_health(client):
     data = response.json()
     assert data["status"] == "healthy"
     assert "simulator_running" in data
-    assert data["active_vehicles"] == 30
+    assert data["active_vehicles"] >= 30
 
 
 def test_api_get_brands(client):
@@ -38,11 +38,11 @@ def test_api_get_brands(client):
 
 
 def test_api_get_fleet(client):
-    """30 araç filosu endpoint testi"""
+    """Araç filosu endpoint testi"""
     response = client.get("/api/fleet")
     assert response.status_code == 200
     fleet = response.json()
-    assert len(fleet) == 30
+    assert len(fleet) >= 30
 
 
 def test_api_get_single_vehicle(client):

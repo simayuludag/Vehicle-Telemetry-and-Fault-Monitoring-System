@@ -967,16 +967,22 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
 
     max_spd = float(vehicle_data.get("max_speed", 220.0))
     def_spd = float(vehicle_data.get("default_speed", 0.0))
+    category = vehicle_data.get("category", "Binek")
+    engine = vehicle_data.get("engine", "2.0L Turbo 200 HP")
+    powertrain = vehicle_data.get("powertrain", "ice")
+    is_ev = bool(vehicle_data.get("is_ev", False) or powertrain == "ev" or "EV" in category or "Elektrik" in engine or "tesla" in vehicle_data.get("brand_id", ""))
 
     new_vehicle = {
         "id": v_id,
         "brand_id": vehicle_data.get("brand_id", "custom").lower().strip(),
         "brand_name": vehicle_data.get("brand_name", "Özel Marka"),
         "model": vehicle_data.get("model", "Özel Model"),
-        "category": vehicle_data.get("category", "Binek"),
+        "category": category,
         "plate": vehicle_data.get("plate", "34 CUSTOM 001"),
         "source_address": sa,
-        "engine": vehicle_data.get("engine", "2.0L Turbo 200 HP"),
+        "engine": engine,
+        "powertrain": "ev" if is_ev else powertrain,
+        "is_ev": is_ev,
         "max_speed": max_spd,
         "default_speed": def_spd,
         "current_speed": def_spd,
@@ -984,7 +990,7 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
         "acceleration_rate": float(vehicle_data.get("acceleration_rate", 6.0)),
         "throttle_pct": 0.0,
         "brake_pct": 0.0,
-        "gear": "P" if def_spd == 0 else "D1",
+        "gear": "P" if def_spd == 0 else ("D" if is_ev else "D1"),
         "battery_soc": float(vehicle_data.get("battery_soc", 95.0)),
         "battery_soh": float(vehicle_data.get("battery_soh", 99.0)),
         "image_url": vehicle_data.get("image_url", f"/static/images/cars/{v_id}.jpg"),

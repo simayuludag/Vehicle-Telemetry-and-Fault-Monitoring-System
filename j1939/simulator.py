@@ -187,7 +187,8 @@ class FleetSimulator:
         target = v["target_speed"]
         base_accel = v.get("acceleration_rate", 6.0)
         max_speed = v.get("max_speed", 250.0)
-        is_ev = "EV" in v.get("category", "") or "Elektrik" in v.get("engine", "") or "tesla" in v.get("brand_id", "")
+        # EV kontrolü
+        is_ev = v.get("is_ev", False) or "EV" in v.get("category", "") or "Elektrik" in v.get("engine", "") or "tesla" in v.get("brand_id", "") or v.get("powertrain") == "ev"
 
         diff = target - current
 
@@ -244,102 +245,112 @@ class FleetSimulator:
             drain = (current / 3600.0) * 0.005 * dt
             v["battery_soc"] = round(max(10.0, v.get("battery_soc", 90.0) - drain), 2)
 
-        v["status"] = "stopped" if current < 0.5 else ("braking" if v["brake_pressed"] else ("accelerating" if target > current + 1.0 else "cruising"))
+        v["status"] = "stopped" if current < 0.5 else ("braking" if v.get("brake_pressed") else ("accelerating" if target > current + 1.0 else "cruising"))
         return v["current_speed"]
 
     async def _simulation_loop(self):
-        """Simülasyon arka plan döngüsü"""
+        """Simülasyon arka plan döngüsü (hataya dayanıklı)"""
         last_time = time.time()
         frame_cycle_counter = 0
 
         while self.is_running:
-            now = time.time()
-            dt = max(0.01, now - last_time)
-            last_time = now
-            frame_cycle_counter += 1
+            try:
+                now = time.time()
+                dt = max(0.01, min(0.5, now - last_time))
+                last_time = now
+                frame_cycle_counter += 1
 
-            batch_frames = []
+                batch_frames = []
 
-            # 30 aracın her biri için fizik ve 4 farklı J1939 CAN çerçevesi oluştur
-            for v_id, v in self.vehicles_state.items():
-                speed = self._update_vehicle_physics(v, dt)
+                # Filodaki araçların her biri için fizik ve J1939 çerçeveleri oluştur
+                for v_id, v in list(self.vehicles_state.items()):
+                    try:
+                        speed = self._update_vehicle_physics(v, dt)
+                        sa = int(v.get("source_address", 0x01))
 
-                # 1. PGN 65265 (0xFEF1 - CCVS1): Araç Hızı & Fren Switch
-                frame_speed = J1939Codec.encode_speed_frame(
-                    speed_kmh=speed,
-                    source_address=v["source_address"],
-                    priority=6,
-                    brake_pressed=v["brake_pressed"]
-                )
-                dict_speed = frame_speed.to_dict()
-                dict_speed.update({"vehicle_id": v_id, "brand_name": v["brand_name"], "model": v["model"], "plate": v["plate"]})
-                v["last_frame"] = dict_speed
-                batch_frames.append(dict_speed)
+                        # 1. PGN 65265 (0xFEF1 - CCVS1): Araç Hızı & Fren Switch
+                        frame_speed = J1939Codec.encode_speed_frame(
+                            speed_kmh=speed,
+                            source_address=sa,
+                            priority=6,
+                            brake_pressed=bool(v.get("brake_pressed", False))
+                        )
+                        dict_speed = frame_speed.to_dict()
+                        dict_speed.update({"vehicle_id": v_id, "brand_name": v.get("brand_name", ""), "model": v.get("model", ""), "plate": v.get("plate", "")})
+                        v["last_frame"] = dict_speed
+                        batch_frames.append(dict_speed)
 
-                # 2. PGN 61443 (0xF003 - EEC2): Gaz Pedalı Açıklığı (%)
-                frame_throttle = J1939Codec.encode_throttle_frame(
-                    throttle_pct=v["throttle_pct"],
-                    source_address=v["source_address"],
-                    priority=6
-                )
-                dict_throttle = frame_throttle.to_dict()
-                dict_throttle.update({"vehicle_id": v_id, "brand_name": v["brand_name"], "model": v["model"], "plate": v["plate"]})
-                batch_frames.append(dict_throttle)
+                        # 2. PGN 61443 (0xF003 - EEC2): Gaz Pedalı Açıklığı (%)
+                        frame_throttle = J1939Codec.encode_throttle_frame(
+                            throttle_pct=float(v.get("throttle_pct", 0.0)),
+                            source_address=sa,
+                            priority=6
+                        )
+                        dict_throttle = frame_throttle.to_dict()
+                        dict_throttle.update({"vehicle_id": v_id, "brand_name": v.get("brand_name", ""), "model": v.get("model", ""), "plate": v.get("plate", "")})
+                        batch_frames.append(dict_throttle)
 
-                # 3. PGN 61445 (0xF005 - ETC2): Vites Bilgisi (Her 2 döngüde bir)
-                if frame_cycle_counter % 2 == 0:
-                    frame_gear = J1939Codec.encode_gear_frame(
-                        gear_str=v["gear"],
-                        source_address=v["source_address"],
-                        priority=6
-                    )
-                    dict_gear = frame_gear.to_dict()
-                    dict_gear.update({"vehicle_id": v_id, "brand_name": v["brand_name"], "model": v["model"], "plate": v["plate"]})
-                    batch_frames.append(dict_gear)
+                        # 3. PGN 61445 (0xF005 - ETC2): Vites Bilgisi (Her 2 döngüde bir)
+                        if frame_cycle_counter % 2 == 0:
+                            frame_gear = J1939Codec.encode_gear_frame(
+                                gear_str=str(v.get("gear", "D")),
+                                source_address=sa,
+                                priority=6
+                            )
+                            dict_gear = frame_gear.to_dict()
+                            dict_gear.update({"vehicle_id": v_id, "brand_name": v.get("brand_name", ""), "model": v.get("model", ""), "plate": v.get("plate", "")})
+                            batch_frames.append(dict_gear)
 
-                # 4. PGN 65110 (0xFE56 - HVS): Batarya SOC & SOH (Her 3 döngüde bir)
-                if frame_cycle_counter % 3 == 0:
-                    frame_battery = J1939Codec.encode_battery_frame(
-                        soc_pct=v.get("battery_soc", 90.0),
-                        soh_pct=v.get("battery_soh", 98.0),
-                        source_address=v["source_address"],
-                        priority=6
-                    )
-                    dict_battery = frame_battery.to_dict()
-                    dict_battery.update({"vehicle_id": v_id, "brand_name": v["brand_name"], "model": v["model"], "plate": v["plate"]})
-                    batch_frames.append(dict_battery)
+                        # 4. PGN 65110 (0xFE56 - HVS): Batarya SOC & SOH (Her 3 döngüde bir)
+                        if frame_cycle_counter % 3 == 0:
+                            frame_battery = J1939Codec.encode_battery_frame(
+                                soc_pct=float(v.get("battery_soc", 90.0)),
+                                soh_pct=float(v.get("battery_soh", 98.0)),
+                                source_address=sa,
+                                priority=6
+                            )
+                            dict_battery = frame_battery.to_dict()
+                            dict_battery.update({"vehicle_id": v_id, "brand_name": v.get("brand_name", ""), "model": v.get("model", ""), "plate": v.get("plate", "")})
+                            batch_frames.append(dict_battery)
 
-                # CAN bus donanım/sanal köprüsüne gönder
-                if self.can_bridge:
-                    self.can_bridge.send_j1939_frame(frame_speed)
+                        # CAN bus donanım/sanal köprüsüne gönder
+                        if self.can_bridge:
+                            self.can_bridge.send_j1939_frame(frame_speed)
 
+                    except Exception as err:
+                        print(f"Araç simülasyon hatası ({v_id}): {err}")
+
+                # Toplam gönderilen mesaj sayacını doğru artır
                 self.total_frames_sent += len(batch_frames)
 
-            # Rolling buffer'a ekle (Son 300 paket)
-            self.recent_frames = (batch_frames + self.recent_frames)[:self.max_history_size]
+                # Rolling buffer'a ekle (Son 300 paket)
+                self.recent_frames = (batch_frames + self.recent_frames)[:self.max_history_size]
 
-            # Abonelere (WebSockets) canlı telemetri paketi gönder
-            telemetry_payload = {
-                "type": "telemetry_update",
-                "timestamp": now,
-                "fleet": list(self.vehicles_state.values()),
-                "batch_frames": batch_frames[:15],  # UI için en son 15 çerçeve
-                "stats": {
-                    "total_frames": self.total_frames_sent,
-                    "active_vehicles": len(self.vehicles_state),
-                    "scenario": self.active_scenario,
-                    "uptime_sec": int(now - self.start_time),
+                # Abonelere (WebSockets) canlı telemetri paketi gönder
+                telemetry_payload = {
+                    "type": "telemetry_update",
+                    "timestamp": now,
+                    "fleet": list(self.vehicles_state.values()),
+                    "batch_frames": batch_frames[:15],
+                    "stats": {
+                        "total_frames": self.total_frames_sent,
+                        "active_vehicles": len(self.vehicles_state),
+                        "scenario": self.active_scenario,
+                        "uptime_sec": int(now - self.start_time),
+                    }
                 }
-            }
 
-            for sub in list(self.subscribers):
-                try:
-                    if asyncio.iscoroutinefunction(sub):
-                        await sub(telemetry_payload)
-                    else:
-                        sub(telemetry_payload)
-                except Exception:
-                    pass
+                for sub in list(self.subscribers):
+                    try:
+                        if asyncio.iscoroutinefunction(sub):
+                            await sub(telemetry_payload)
+                        else:
+                            sub(telemetry_payload)
+                    except Exception:
+                        pass
+
+            except Exception as e:
+                print(f"Simülasyon ana döngü hatası: {e}")
 
             await asyncio.sleep(self.tick_interval)
 
