@@ -986,7 +986,7 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
         counter += 1
 
     sa = vehicle_data.get("source_address")
-    if sa is None:
+    if sa is None or any(v["source_address"] == int(sa) for v in VEHICLES):
         sa = get_next_available_source_address()
     else:
         sa = int(sa)

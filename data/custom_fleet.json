@@ -1,56 +1,32 @@
 {
   "brands": [
     {
+      "id": "isuzu",
+      "name": "Isuzu",
+      "country": "Japan",
+      "color": "#E50012",
+      "badge": "ISUZ",
+      "accent": "rgba(229, 0, 18, 0.2)"
+    },
+    {
       "id": "togg",
       "name": "TOGG",
       "country": "Türkiye",
       "color": "#00A8E8",
       "badge": "TOGG",
       "accent": "rgba(0, 210, 255, 0.2)"
-    },
-    {
-      "id": "ısuzu",
-      "name": "ısuzu",
-      "country": "Global",
-      "color": "#00d2ff",
-      "badge": "ISUZ",
-      "accent": "rgba(0, 210, 255, 0.2)"
     }
   ],
   "vehicles": [
     {
-      "id": "ısuzu-npr-long",
-      "brand_id": "ısuzu",
-      "brand_name": "ısuzu",
+      "id": "isuzu-npr-long",
+      "brand_id": "isuzu",
+      "brand_name": "Isuzu",
       "model": "NPR LONG",
       "category": "Ticari",
       "plate": "41 SU 067",
       "source_address": 31,
-      "engine": "2.0L Turbo 200 HP",
-      "max_speed": 100.0,
-      "default_speed": 0.0,
-      "current_speed": 0.0,
-      "target_speed": 0.0,
-      "acceleration_rate": 6.0,
-      "throttle_pct": 0.0,
-      "brake_pct": 0.0,
-      "gear": "P",
-      "battery_soc": 95.0,
-      "battery_soh": 99.0,
-      "image_url": "/static/images/cars/ısuzu-npr-long.jpg",
-      "status": "stopped",
-      "simulation_mode": "manual",
-      "brake_pressed": false
-    },
-    {
-      "id": "ısuzu-npr-long-1",
-      "brand_id": "ısuzu",
-      "brand_name": "ısuzu",
-      "model": "NPR LONG",
-      "category": "Ticari",
-      "plate": "41 SU 067",
-      "source_address": 32,
-      "engine": "126- 150  hp",
+      "engine": "126- 150 HP",
       "powertrain": "ice",
       "is_ev": false,
       "max_speed": 100.0,
@@ -63,7 +39,7 @@
       "gear": "P",
       "battery_soc": 95.0,
       "battery_soh": 99.0,
-      "image_url": "/static/images/cars/ısuzu-npr-long.png",
+      "image_url": "/static/images/cars/isuzu-npr-long.png",
       "status": "stopped",
       "simulation_mode": "manual",
       "brake_pressed": false
@@ -100,7 +76,6 @@
     "fiat-egea-cross": "/static/images/cars/fiat-egea-cross.svg",
     "fiat-500e": "/static/images/cars/fiat-500e.svg",
     "fiat-doblo-combi": "/static/images/cars/fiat-doblo-combi.svg",
-    "ısuzu-npr-long": "/static/images/cars/ısuzu-npr-long.jpg",
-    "ısuzu-npr-long-1": "/static/images/cars/ısuzu-npr-long.png"
+    "isuzu-npr-long": "/static/images/cars/isuzu-npr-long.png"
   }
 }

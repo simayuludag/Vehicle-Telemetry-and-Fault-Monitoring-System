@@ -812,8 +812,8 @@ document.addEventListener('DOMContentLoaded', () => {
           method: 'POST',
           body: formData
         });
-        const data = await res.json();
-        if (data.status === 'ok') {
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.status === 'ok') {
           closeAddVehicleModal();
           alert(`✅ ${brandName} ${model} başarıyla filoya eklendi ve J1939 CAN Bus ağına dahil edildi!`);
           
@@ -825,11 +825,12 @@ document.addEventListener('DOMContentLoaded', () => {
           renderFleetGrid();
           selectVehicle(data.vehicle.id);
         } else {
-          alert('❌ Araç eklenemedi.');
+          const detail = data.detail || data.message || `HTTP ${res.status}`;
+          alert(`❌ Araç eklenemedi: ${detail}`);
         }
       } catch (err) {
         console.error('Araç ekleme hatası:', err);
-        alert('❌ Araç eklenirken sunucu hatası oluştu.');
+        alert(`❌ Araç eklenirken bağlantı hatası: ${err.message}`);
       }
     });
   }
