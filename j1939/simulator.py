@@ -293,8 +293,9 @@ class FleetSimulator:
                         batch_frames.append(dict_speed)
 
                         # 2. PGN 61443 (0xF003 - EEC2): Gaz Pedalı Açıklığı (%)
+                        throttle_val = float(v.get("throttle_pct") or 0.0) if v.get("throttle_pct") is not None else 0.0
                         frame_throttle = J1939Codec.encode_throttle_frame(
-                            throttle_pct=float(v.get("throttle_pct", 0.0)),
+                            throttle_pct=throttle_val,
                             source_address=sa,
                             priority=6
                         )
@@ -304,8 +305,9 @@ class FleetSimulator:
 
                         # 3. PGN 61445 (0xF005 - ETC2): Vites Bilgisi (Her 2 döngüde bir)
                         if frame_cycle_counter % 2 == 0:
+                            gear_val = str(v.get("gear") or "D")
                             frame_gear = J1939Codec.encode_gear_frame(
-                                gear_str=str(v.get("gear", "D")),
+                                gear_str=gear_val,
                                 source_address=sa,
                                 priority=6
                             )
@@ -313,11 +315,13 @@ class FleetSimulator:
                             dict_gear.update({"vehicle_id": v_id, "brand_name": v.get("brand_name", ""), "model": v.get("model", ""), "plate": v.get("plate", "")})
                             batch_frames.append(dict_gear)
 
-                        # 4. PGN 65110 (0xFE56 - HVS): Batarya SOC & SOH (Her 3 döngüde bir)
-                        if frame_cycle_counter % 3 == 0:
+                        # 4. PGN 65110 (0xFE56 - HVS): Batarya SOC & SOH (Sadece EV ve Hibrit araçlar için, her 3 döngüde bir)
+                        if frame_cycle_counter % 3 == 0 and v.get("battery_soc") is not None:
+                            soc_val = float(v.get("battery_soc") or 90.0)
+                            soh_val = float(v.get("battery_soh") or 98.0)
                             frame_battery = J1939Codec.encode_battery_frame(
-                                soc_pct=float(v.get("battery_soc", 90.0)),
-                                soh_pct=float(v.get("battery_soh", 98.0)),
+                                soc_pct=soc_val,
+                                soh_pct=soh_val,
                                 source_address=sa,
                                 priority=6
                             )

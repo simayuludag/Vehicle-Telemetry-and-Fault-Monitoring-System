@@ -1038,6 +1038,22 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
     engine = vehicle_data.get("engine", "2.0L Turbo 200 HP")
     powertrain = vehicle_data.get("powertrain", "ice")
     is_ev = bool(vehicle_data.get("is_ev", False) or powertrain == "ev" or "EV" in category or "Elektrik" in engine or "tesla" in vehicle_data.get("brand_id", ""))
+    final_powertrain = "ev" if is_ev else powertrain
+    if is_ev:
+        soc = float(vehicle_data.get("battery_soc") or 95.0)
+        soh = float(vehicle_data.get("battery_soh") or 99.0)
+        fuel = None
+        v12 = None
+    elif final_powertrain == "hybrid":
+        soc = float(vehicle_data.get("battery_soc") or 65.0)
+        soh = float(vehicle_data.get("battery_soh") or 98.0)
+        fuel = float(vehicle_data.get("fuel_level_pct") or 82.0)
+        v12 = 14.1
+    else:
+        soc = None
+        soh = None
+        fuel = float(vehicle_data.get("fuel_level_pct") or 85.0)
+        v12 = 14.2
 
     new_vehicle = {
         "id": v_id,
@@ -1048,7 +1064,7 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
         "plate": vehicle_data.get("plate", "34 CUSTOM 001"),
         "source_address": sa,
         "engine": engine,
-        "powertrain": "ev" if is_ev else powertrain,
+        "powertrain": final_powertrain,
         "is_ev": is_ev,
         "max_speed": max_spd,
         "default_speed": def_spd,
@@ -1058,8 +1074,10 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
         "throttle_pct": 0.0,
         "brake_pct": 0.0,
         "gear": "P" if def_spd == 0 else ("D" if is_ev else "D1"),
-        "battery_soc": float(vehicle_data.get("battery_soc", 95.0)),
-        "battery_soh": float(vehicle_data.get("battery_soh", 99.0)),
+        "battery_soc": soc,
+        "battery_soh": soh,
+        "fuel_level_pct": fuel,
+        "battery_12v": v12,
         "image_url": vehicle_data.get("image_url", f"/static/images/cars/{v_id}.jpg"),
         "status": "stopped" if def_spd == 0 else "cruising",
         "simulation_mode": "manual",
