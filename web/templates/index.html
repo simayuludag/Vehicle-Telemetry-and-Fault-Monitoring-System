@@ -375,11 +375,27 @@
       <!-- 1. MULTI-SIGNAL COCKPIT HUD -->
       <div class="cockpit-card">
         
-        <!-- Dedicated Car Visual Card (Her araca özel yerel SVG kartı) -->
+        <!-- Dedicated Car Visual Card (Her araca özel yerel görsel ve canlı başlık) -->
         <div class="active-vehicle-showcase-card">
-          <img id="activeVehiclePhoto" src="/static/images/cars/bmw-320i.svg" alt="Araç Görseli" class="active-vehicle-showcase-img">
-          <div style="position: absolute; bottom: 10px; right: 12px; z-index: 10;">
-            <label for="carPhotoFileInput" style="background: rgba(7, 9, 14, 0.85); border: 1px solid rgba(0, 210, 255, 0.5); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: all 0.2s ease;">
+          <!-- Top Overlay: Araç Adı, Plaka ve Aktarma Organı Türü -->
+          <div style="position: absolute; top: 12px; left: 14px; right: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none;">
+            <div style="background: rgba(7, 9, 14, 0.88); backdrop-filter: blur(12px); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 18px rgba(0,0,0,0.6);">
+              <div id="showcaseVehicleTitle" style="font-family: 'Chakra Petch', sans-serif; font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: 0.5px;">BMW 320i Sedan M Sport</div>
+              <div id="showcaseVehicleSub" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">34 BMW 320 · 2.0L TwinPower Turbo</div>
+            </div>
+            <div id="showcasePowertrainBadge" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Chakra Petch', sans-serif; font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; box-shadow: 0 0 14px rgba(245, 158, 11, 0.35); text-transform: uppercase;">
+              ⛽ BENZİNLİ (ICE)
+            </div>
+          </div>
+
+          <img id="activeVehiclePhoto" src="/static/images/cars/bmw-320i.jpg" alt="Araç Görseli" class="active-vehicle-showcase-img">
+          
+          <!-- Bottom Overlay: J1939 SA & Fotoğraf Yükleme Butonu -->
+          <div style="position: absolute; bottom: 10px; right: 12px; left: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center;">
+            <span id="showcaseSaBadge" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.4); color: #00d2ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+              J1939 SA: 0x01
+            </span>
+            <label for="carPhotoFileInput" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.5); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: all 0.2s ease;">
               📷 Fotoğraf Değiştir / Yükle (.jpg / .png)
             </label>
             <input type="file" id="carPhotoFileInput" accept="image/jpeg, image/png, image/webp" style="display: none;">

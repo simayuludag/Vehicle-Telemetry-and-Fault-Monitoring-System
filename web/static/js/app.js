@@ -225,15 +225,22 @@ document.addEventListener('DOMContentLoaded', () => {
       card.id = `card-${v.id}`;
       card.dataset.id = v.id;
 
-      // Enerji Hapı (EV: Batarya, Hibrit: HEV, Benzin/Dizel: Yakıt Deposu)
+      // Aktarma Organı Etiketi & Enerji Hapı (EV: Batarya %, Hibrit: HEV %, Benzin/Dizel: Yakıt %)
+      let powertrainPillHtml = '';
       let energyPillHtml = '';
+
       if (v.powertrain === 'ev' || v.is_ev) {
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🔋 %${Math.round(v.battery_soc || 95)}</span>`;
+        powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3);">⚡ EV</span>`;
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🔋 Batarya %${Math.round(v.battery_soc || 95)}</span>`;
       } else if (v.powertrain === 'hybrid') {
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🌿 %${Math.round(v.battery_soc || 65)} (HEV)</span>`;
+        powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3);">🌿 HİBRİT</span>`;
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🌿 HEV %${Math.round(v.battery_soc || 65)}</span>`;
       } else {
+        const isDiesel = v.engine && v.engine.toLowerCase().includes('dizel');
+        const ptLabel = isDiesel ? '⛽ DİZEL' : '⛽ BENZİN';
         const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85;
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#f59e0b">⛽ %${Math.round(fuel)} (Yakıt)</span>`;
+        powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.3);">${ptLabel}</span>`;
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#f59e0b">⛽ Yakıt %${Math.round(fuel)}</span>`;
       }
 
       card.innerHTML = `
@@ -242,7 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
             <span style="color:${brand.color}">●</span>
             ${v.brand_name}
           </div>
-          <div class="sa-pill">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            ${powertrainPillHtml}
+            <div class="sa-pill">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</div>
+          </div>
         </div>
         
         <div class="vehicle-model-title">${v.model}</div>
@@ -295,14 +305,14 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (energyEl) {
         if (v.powertrain === 'ev' || v.is_ev) {
-          energyEl.textContent = `🔋 %${Math.round(v.battery_soc || 95)}`;
+          energyEl.textContent = `🔋 Batarya %${Math.round(v.battery_soc || 95)}`;
           energyEl.style.color = '#10b981';
         } else if (v.powertrain === 'hybrid') {
-          energyEl.textContent = `🌿 %${Math.round(v.battery_soc || 65)} (HEV)`;
+          energyEl.textContent = `🌿 HEV %${Math.round(v.battery_soc || 65)}`;
           energyEl.style.color = '#10b981';
         } else {
           const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85;
-          energyEl.textContent = `⛽ %${Math.round(fuel)} (Yakıt)`;
+          energyEl.textContent = `⛽ Yakıt %${Math.round(fuel)}`;
           energyEl.style.color = '#f59e0b';
         }
       }
@@ -326,7 +336,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = fleet.find(item => item.id === selectedVehicleId);
     if (!v) return;
 
-    // 1. Seçili Aracın Görselini Yükle
+    // 1. Vitrin Başlığı, Plaka ve Aktarma Organı Rozeti
+    const showcaseTitleEl = document.getElementById('showcaseVehicleTitle');
+    const showcaseSubEl = document.getElementById('showcaseVehicleSub');
+    const showcaseBadgeEl = document.getElementById('showcasePowertrainBadge');
+    const showcaseSaEl = document.getElementById('showcaseSaBadge');
+
+    if (showcaseTitleEl) showcaseTitleEl.textContent = `${v.brand_name} ${v.model}`;
+    if (showcaseSubEl) showcaseSubEl.textContent = `${v.plate} · ${v.engine || v.category}`;
+    if (showcaseSaEl) showcaseSaEl.textContent = `J1939 SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+
+    if (showcaseBadgeEl) {
+      if (v.powertrain === 'ev' || v.is_ev) {
+        showcaseBadgeEl.innerHTML = '⚡ TAM ELEKTRİKLİ (BEV)';
+        showcaseBadgeEl.style.color = '#10b981';
+        showcaseBadgeEl.style.borderColor = '#10b981';
+        showcaseBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+        showcaseBadgeEl.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.4)';
+      } else if (v.powertrain === 'hybrid') {
+        showcaseBadgeEl.innerHTML = '🌿 HİBRİT MOTOR (HEV)';
+        showcaseBadgeEl.style.color = '#10b981';
+        showcaseBadgeEl.style.borderColor = '#10b981';
+        showcaseBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
+        showcaseBadgeEl.style.boxShadow = '0 0 14px rgba(16, 185, 129, 0.4)';
+      } else {
+        const isDiesel = v.engine && v.engine.toLowerCase().includes('dizel');
+        showcaseBadgeEl.innerHTML = isDiesel ? '⛽ DİZEL (ICE)' : '⛽ BENZİNLİ (ICE)';
+        showcaseBadgeEl.style.color = '#f59e0b';
+        showcaseBadgeEl.style.borderColor = '#f59e0b';
+        showcaseBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
+        showcaseBadgeEl.style.boxShadow = '0 0 14px rgba(245, 158, 11, 0.4)';
+      }
+    }
+
+    // 2. Seçili Aracın Görselini Yükle
     if (activeVehiclePhotoEl && (forceImageUpdate || lastLoadedVehicleId !== v.id)) {
       lastLoadedVehicleId = v.id;
       setCarImage(activeVehiclePhotoEl, v.id);
@@ -345,22 +388,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // 2. Hız Kadranı (Cluster Göstergesi)
+    // 3. Hız Kadranı (Cluster Göstergesi)
     if (gauge) {
       gauge.setSpeed(v.current_speed, v.max_speed);
     }
 
-    // 3. Gaz Pedalı (SPN 91)
+    // 4. Gaz Pedalı (SPN 91)
     const throttlePct = v.throttle_pct || 0.0;
     if (throttleBarFillEl) throttleBarFillEl.style.height = `${Math.min(100, Math.max(0, throttlePct))}%`;
     if (throttleReadoutEl) throttleReadoutEl.textContent = `%${Math.round(throttlePct)}`;
 
-    // 4. Fren Pedalı (SPN 563 / 521)
+    // 5. Fren Pedalı (SPN 563 / 521)
     const brakePct = v.brake_pct || 0.0;
     if (brakeBarFillEl) brakeBarFillEl.style.height = `${Math.min(100, Math.max(0, brakePct))}%`;
     if (brakeReadoutEl) brakeReadoutEl.textContent = `%${Math.round(brakePct)}`;
 
-    // 5. Modern PRND Vites Göstergesi (SPN 523)
+    // 6. Modern PRND Vites Göstergesi (SPN 523)
     const currentGear = v.gear || "P";
     if (activeGearBigBadgeEl) activeGearBigBadgeEl.textContent = currentGear;
 
@@ -369,22 +412,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prndNEl) prndNEl.classList.toggle('active', currentGear === 'N');
     if (prndDEl) prndDEl.classList.toggle('active', currentGear.startsWith('D') || currentGear === 'D');
 
-    // 6. Enerji & Batarya / Yakıt Durumu (EV / Hibrit / Benzin-Dizel)
+    // 7. Enerji & Batarya / Yakıt Durumu (EV / Hibrit / Benzin-Dizel)
     if (v.powertrain === 'ev' || v.is_ev) {
       const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 95.0;
       const soh = v.battery_soh !== undefined && v.battery_soh !== null ? v.battery_soh : 99.0;
       if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '🔋 HV Batarya Telemetrisi';
       if (energyBoxPgnEl) {
         energyBoxPgnEl.textContent = 'PGN 0xFE56 (HVS)';
-        energyBoxPgnEl.style.color = '#a855f7';
+        energyBoxPgnEl.style.color = '#10b981';
       }
-      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'ŞARJ (SOC)';
+      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'BATARYA ŞARJI (SOC)';
       if (energyPrimaryValEl) {
         energyPrimaryValEl.textContent = `%${soc.toFixed(1)}`;
         energyPrimaryValEl.style.color = '#10b981';
       }
-      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'SAĞLIK (SOH)';
-      if (energySecondaryValEl) energySecondaryValEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
+      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'BATARYA SAĞLIĞI (SOH)';
+      if (energySecondaryValEl) {
+        energySecondaryValEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
+        energySecondaryValEl.style.color = '#94a3b8';
+      }
     } else if (v.powertrain === 'hybrid') {
       const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 65.0;
       const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 80.0;
@@ -399,7 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
         energyPrimaryValEl.style.color = '#10b981';
       }
       if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'YAKIT DEPOSU (SPN 96)';
-      if (energySecondaryValEl) energySecondaryValEl.textContent = `%${fuel.toFixed(1)}`;
+      if (energySecondaryValEl) {
+        energySecondaryValEl.textContent = `%${fuel.toFixed(1)}`;
+        energySecondaryValEl.style.color = '#f59e0b';
+      }
     } else {
       // Benzin / Dizel İçten Yanmalı
       const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85.0;
@@ -409,13 +458,16 @@ document.addEventListener('DOMContentLoaded', () => {
         energyBoxPgnEl.textContent = 'PGN 0xFEFC (DASH)';
         energyBoxPgnEl.style.color = '#f59e0b';
       }
-      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'YAKIT DEPOSU (SPN 96)';
+      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'YAKIT SEVİYESİ (SPN 96)';
       if (energyPrimaryValEl) {
         energyPrimaryValEl.textContent = `%${fuel.toFixed(1)}`;
         energyPrimaryValEl.style.color = '#f59e0b';
       }
       if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = '12V AKÜ (SPN 168)';
-      if (energySecondaryValEl) energySecondaryValEl.textContent = `${v12.toFixed(1)} V (Normal)`;
+      if (energySecondaryValEl) {
+        energySecondaryValEl.textContent = `${v12.toFixed(1)} V (Normal)`;
+        energySecondaryValEl.style.color = '#94a3b8';
+      }
     }
 
     // 7. Hız Slider'ı
