@@ -1,6 +1,6 @@
 /**
- * J1939 Multi-Signal Fleet Telemetry & Central Controller
- * Auto-resolves user-provided images: .jpg -> .png -> .webp -> .svg
+ * J1939 Telematics & Fleet Monitoring Platform
+ * Real-time automotive telemetry stream: Motion, Engine, Powertrain, Energy, Odometer, Diagnostics & CAN Sniffer
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let brands = [];
   let selectedVehicleId = 'bmw-320i';
   let activeBrandFilter = 'all';
-  let isFleetMode = false;
   let snifferPaused = false;
   let snifferSearchQuery = '';
   let ws = null;
@@ -19,48 +18,66 @@ document.addEventListener('DOMContentLoaded', () => {
   const maxSnifferRows = 100;
   const canLogList = [];
 
-  // DOM Elemanları
+  // DOM Elemanları - Filo & Header
   const fleetGridEl = document.getElementById('fleetGrid');
   const brandFiltersEl = document.getElementById('brandFilters');
   const activeVehiclePhotoEl = document.getElementById('activeVehiclePhoto');
-  const activeScopePillEl = document.getElementById('activeScopePill');
-  const tabSingleVehicleEl = document.getElementById('tabSingleVehicle');
-  const tabFleetModeEl = document.getElementById('tabFleetMode');
-  const sliderLabelEl = document.getElementById('sliderLabel');
-  const speedSliderEl = document.getElementById('speedSlider');
-  const speedSliderValEl = document.getElementById('speedSliderVal');
-  const btnThrottleEl = document.getElementById('btnThrottle');
-  const btnBrakeGradualEl = document.getElementById('btnBrakeGradual');
-  const btnBrakeFullEl = document.getElementById('btnBrakeFull');
-  const btnEmergencyStopEl = document.getElementById('btnEmergencyStop');
-  const snifferTableBodyEl = document.getElementById('snifferTableBody');
-  const snifferSearchInputEl = document.getElementById('snifferSearchInput');
-  const pauseSnifferBtn = document.getElementById('pauseSnifferBtn');
-  const clearSnifferBtn = document.getElementById('clearSnifferBtn');
-  const exportSnifferBtn = document.getElementById('exportSnifferBtn');
   const wsStatusDot = document.getElementById('wsStatusDot');
   const wsStatusText = document.getElementById('wsStatusText');
   const totalFramesCounterEl = document.getElementById('totalFramesCounter');
-  const scenarioBadgeEl = document.getElementById('scenarioBadge');
 
-  // Multi-Signal HUD Elements
+  // DOM Elemanları - Sürüş HUD & Kadran
   const throttleBarFillEl = document.getElementById('throttleBarFill');
   const throttleReadoutEl = document.getElementById('throttleReadout');
   const brakeBarFillEl = document.getElementById('brakeBarFill');
   const brakeReadoutEl = document.getElementById('brakeReadout');
+  const telemetryRpmVal = document.getElementById('telemetryRpmVal');
+  const telemetryLoadVal = document.getElementById('telemetryLoadVal');
+  const telemetryCruiseVal = document.getElementById('telemetryCruiseVal');
+
+  // DOM Elemanları - Vites & Sürüş Durumu
   const activeGearBigBadgeEl = document.getElementById('activeGearBigBadge');
   const prndPEl = document.getElementById('prnd-P');
   const prndREl = document.getElementById('prnd-R');
   const prndNEl = document.getElementById('prnd-N');
   const prndDEl = document.getElementById('prnd-D');
-  const energyBoxTitleEl = document.getElementById('energyBoxTitle');
-  const energyBoxPgnEl = document.getElementById('energyBoxPgn');
-  const energyPrimaryLabelEl = document.getElementById('energyPrimaryLabel');
-  const energyPrimaryValEl = document.getElementById('energyPrimaryVal');
-  const energySecondaryLabelEl = document.getElementById('energySecondaryLabel');
-  const energySecondaryValEl = document.getElementById('energySecondaryVal');
+  const telemetryDriveStatus = document.getElementById('telemetryDriveStatus');
+  const telemetryEcoScoreVal = document.getElementById('telemetryEcoScoreVal');
 
-  // CAN Inspector DOM Elemanları
+  // DOM Elemanları - Domain 1: Enerji, Batarya & Yakıt
+  const domainEnergyTitle = document.getElementById('domainEnergyTitle');
+  const domainEnergyPgn = document.getElementById('domainEnergyPgn');
+  const kpiEnergyLevelLabel = document.getElementById('kpiEnergyLevelLabel');
+  const kpiEnergyLevelVal = document.getElementById('kpiEnergyLevelVal');
+  const kpiEnergyLevelSub = document.getElementById('kpiEnergyLevelSub');
+  const kpiRangeLabel = document.getElementById('kpiRangeLabel');
+  const kpiRangeVal = document.getElementById('kpiRangeVal');
+  const kpiConsumptionVal = document.getElementById('kpiConsumptionVal');
+  const kpiSecondaryEnergyLabel = document.getElementById('kpiSecondaryEnergyLabel');
+  const kpiSecondaryEnergyVal = document.getElementById('kpiSecondaryEnergyVal');
+  const kpiSecondaryEnergySub = document.getElementById('kpiSecondaryEnergySub');
+  const kpiElectricalLabel = document.getElementById('kpiElectricalLabel');
+  const kpiElectricalVal = document.getElementById('kpiElectricalVal');
+  const kpiElectricalSub = document.getElementById('kpiElectricalSub');
+
+  // DOM Elemanları - Domain 2: Motor & Mekanik Sağlık
+  const kpiCoolantVal = document.getElementById('kpiCoolantVal');
+  const kpiOilVal = document.getElementById('kpiOilVal');
+  const kpiTransTempVal = document.getElementById('kpiTransTempVal');
+  const kpiEngineHoursVal = document.getElementById('kpiEngineHoursVal');
+
+  // DOM Elemanları - Domain 3: Odometre, Seyahat & GPS
+  const kpiOdometerVal = document.getElementById('kpiOdometerVal');
+  const kpiTripVal = document.getElementById('kpiTripVal');
+  const kpiGpsCoordsVal = document.getElementById('kpiGpsCoordsVal');
+  const kpiGpsLocName = document.getElementById('kpiGpsLocName');
+  const kpiDtcVal = document.getElementById('kpiDtcVal');
+
+  // DOM Elemanları - Domain 4: Güvenlik & TPMS
+  const safetyTpmsVal = document.getElementById('safetyTpmsVal');
+  const safetyDoorsVal = document.getElementById('safetyDoorsVal');
+
+  // DOM Elemanları - CAN Inspector
   const inspPgnBadgeEl = document.getElementById('inspPgnBadge');
   const inspCanIdEl = document.getElementById('inspCanId');
   const inspPgnEl = document.getElementById('inspPgn');
@@ -69,10 +86,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const hexBytesRowEl = document.getElementById('hexBytesRow');
   const spnFormulaHintEl = document.getElementById('spnFormulaHint');
 
+  // DOM Elemanları - Sniffer
+  const snifferTableBodyEl = document.getElementById('snifferTableBody');
+  const snifferSearchInputEl = document.getElementById('snifferSearchInput');
+  const pauseSnifferBtn = document.getElementById('pauseSnifferBtn');
+  const clearSnifferBtn = document.getElementById('clearSnifferBtn');
+  const exportSnifferBtn = document.getElementById('exportSnifferBtn');
+  const btnExportFleetTelematics = document.getElementById('btnExportFleetTelematics');
+
   // Gauge Başlat
   gauge = new window.SpeedGauge('speedGaugeCanvas');
 
-  // Akıllı Görsel Yükleyici (.png -> .jpg -> .webp -> .svg)
+  // Akıllı Görsel Yükleyici (.jpg -> .png -> .webp -> .svg)
   function setCarImage(imgElement, vehicleId, explicitUrl = null) {
     if (!imgElement) return;
     const v = fleet.find(item => item.id === vehicleId);
@@ -85,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const exts = ['.png', '.jpg', '.webp', '.jpeg', '.svg'];
+    const exts = ['.jpg', '.png', '.webp', '.jpeg', '.svg'];
     let currentExtIdx = 0;
 
     function tryNext() {
@@ -136,10 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
           brands = msg.brands || brands;
           renderBrandFilters();
         } else if (msg.type === 'vehicle_removed') {
-          fleet = msg.fleet || fleet;
+          fleet = msg.fleet || fleet.filter(item => item.id !== msg.vehicle_id);
           if (selectedVehicleId === msg.vehicle_id && fleet.length > 0) {
             selectedVehicleId = fleet[0].id;
           }
+          renderBrandFilters();
           renderFleetGrid();
           updateSelectedVehicleView();
         } else if (msg.type === 'vehicle_image_updated') {
@@ -155,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
           if (msg.stats) {
             totalFramesCounterEl.textContent = msg.stats.total_frames.toLocaleString();
-            scenarioBadgeEl.textContent = (msg.stats.scenario || 'Normal').toUpperCase();
           }
 
           if (msg.batch_frames && !snifferPaused) {
@@ -184,15 +209,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderBrandFilters() {
     brandFiltersEl.innerHTML = `
       <button class="brand-chip ${activeBrandFilter === 'all' ? 'active' : ''}" data-brand="all">
-        🌐 Tümü (30 Araç)
+        🌐 Tümü (${fleet.length} Araç)
       </button>
     `;
 
     brands.forEach(b => {
+      const count = fleet.filter(v => v.brand_id === b.id).length;
+      if (count === 0 && b.id !== '__new__') return;
       const btn = document.createElement('button');
       btn.className = `brand-chip ${activeBrandFilter === b.id ? 'active' : ''}`;
       btn.dataset.brand = b.id;
-      btn.innerHTML = `<span style="color:${b.color}">●</span> ${b.name}`;
+      btn.innerHTML = `<span style="color:${b.color}">●</span> ${b.name} (${count})`;
       btn.addEventListener('click', () => {
         activeBrandFilter = b.id;
         document.querySelectorAll('.brand-chip').forEach(c => c.classList.remove('active'));
@@ -210,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 3. 30 Araçlık Izgarayı (Grid) Oluştur
+  // 3. 30+ Araçlık Telematik Filo Izgarasını (Grid) Oluştur
   function renderFleetGrid() {
     fleetGridEl.innerHTML = '';
 
@@ -225,23 +252,29 @@ document.addEventListener('DOMContentLoaded', () => {
       card.id = `card-${v.id}`;
       card.dataset.id = v.id;
 
-      // Aktarma Organı Etiketi & Enerji Hapı (EV: Batarya %, Hibrit: HEV %, Benzin/Dizel: Yakıt %)
+      // Aktarma Organı Etiketi & Enerji Göstergesi
       let powertrainPillHtml = '';
       let energyPillHtml = '';
+      let energyVal = 95;
 
       if (v.powertrain === 'ev' || v.is_ev) {
         powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3);">⚡ EV</span>`;
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🔋 Batarya %${Math.round(v.battery_soc || 95)}</span>`;
+        energyVal = Math.round(v.battery_soc || 95);
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🔋 Batarya %${energyVal}</span>`;
       } else if (v.powertrain === 'hybrid') {
         powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(16, 185, 129, 0.15); color:#10b981; border:1px solid rgba(16, 185, 129, 0.3);">🌿 HİBRİT</span>`;
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🌿 HEV %${Math.round(v.battery_soc || 65)}</span>`;
+        energyVal = Math.round(v.battery_soc || 65);
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🌿 HEV %${energyVal}</span>`;
       } else {
         const isDiesel = v.engine && v.engine.toLowerCase().includes('dizel');
         const ptLabel = isDiesel ? '⛽ DİZEL' : '⛽ BENZİN';
-        const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85;
+        energyVal = Math.round(v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85);
         powertrainPillHtml = `<span style="font-size:0.68rem; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(245, 158, 11, 0.15); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.3);">${ptLabel}</span>`;
-        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#f59e0b">⛽ Yakıt %${Math.round(fuel)}</span>`;
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#f59e0b">⛽ Yakıt %${energyVal}</span>`;
       }
+
+      const rpmText = v.engine_rpm ? `${v.engine_rpm.toLocaleString()} RPM` : 'Rölanti';
+      const odoText = v.odometer_km ? `${Math.round(v.odometer_km).toLocaleString()} km` : '18,500 km';
 
       card.innerHTML = `
         <div class="vehicle-card-top-row">
@@ -256,24 +289,24 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         
         <div class="vehicle-model-title">${v.model}</div>
-        <div class="vehicle-specs-line">${v.plate} · ${v.category}</div>
+        <div class="vehicle-specs-line">${v.plate} · ${v.category} · <span id="card-odo-${v.id}" style="color:#64748b">${odoText}</span></div>
         
         <div class="vehicle-speed-line">
           <div class="speed-readout">
-            <span id="speed-num-${v.id}">${Math.round(v.current_speed)}</span>
+            <span id="speed-num-${v.id}">${Math.round(v.current_speed || 0)}</span>
             <span class="unit">KM/H</span>
           </div>
-          <div class="status-badge ${v.status}" id="status-badge-${v.id}">${v.status}</div>
+          <div class="status-badge ${v.status || 'cruising'}" id="status-badge-${v.id}">${v.status === 'stopped' ? 'DURDU' : (v.current_speed > 90 ? 'OTOYOL' : 'SEYİR')}</div>
         </div>
 
         <div class="card-telemetry-pills">
-          <span class="pill-gear" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
+          <span class="pill-gear" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'} (${rpmText})</span>
           ${energyPillHtml}
           <span class="pill-throttle" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
         </div>
 
         <div class="speed-bar-track">
-          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${(v.current_speed / v.max_speed) * 100}%"></div>
+          <div class="speed-bar-fill" id="speed-bar-${v.id}" style="width: ${((v.current_speed || 0) / (v.max_speed || 220)) * 100}%"></div>
         </div>
       `;
 
@@ -285,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. Canlı Veri Akışında Sayıları Güncelle
+  // 4. Canlı Veri Akışında Filo Kartlarını Güncelle
   function updateFleetGridRealtime() {
     fleet.forEach(v => {
       const numEl = document.getElementById(`speed-num-${v.id}`);
@@ -294,14 +327,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const gearEl = document.getElementById(`badge-gear-${v.id}`);
       const energyEl = document.getElementById(`badge-energy-${v.id}`);
       const throttleEl = document.getElementById(`badge-throttle-${v.id}`);
+      const odoEl = document.getElementById(`card-odo-${v.id}`);
 
-      if (numEl) numEl.textContent = Math.round(v.current_speed);
-      if (barEl) barEl.style.width = `${Math.min(100, (v.current_speed / v.max_speed) * 100)}%`;
+      if (numEl) numEl.textContent = Math.round(v.current_speed || 0);
+      if (barEl) barEl.style.width = `${Math.min(100, ((v.current_speed || 0) / (v.max_speed || 220)) * 100)}%`;
       if (badgeEl) {
-        badgeEl.className = `status-badge ${v.status}`;
-        badgeEl.textContent = v.status;
+        badgeEl.className = `status-badge ${v.status || 'cruising'}`;
+        badgeEl.textContent = v.status === 'stopped' ? 'DURDU' : (v.current_speed > 90 ? 'OTOYOL' : 'SEYİR');
       }
-      if (gearEl) gearEl.textContent = `🕹️ ${v.gear || 'D'}`;
+      if (gearEl) {
+        const rpmText = v.engine_rpm ? `${v.engine_rpm} RPM` : 'Rölanti';
+        gearEl.textContent = `🕹️ ${v.gear || 'D'} (${rpmText})`;
+      }
+      if (odoEl && v.odometer_km) {
+        odoEl.textContent = `${Math.round(v.odometer_km).toLocaleString()} km`;
+      }
       
       if (energyEl) {
         if (v.powertrain === 'ev' || v.is_ev) {
@@ -321,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Araç Seçimi & Kokpit HUD ve Fotoğrafını Güncelleme
+  // 5. Araç Seçimi & Telematik Gösterge Panelini Güncelleme
   let lastLoadedVehicleId = null;
 
   function selectVehicle(vehicleId) {
@@ -376,21 +416,9 @@ document.addEventListener('DOMContentLoaded', () => {
       activeVehiclePhotoEl.alt = `${v.brand_name} ${v.model}`;
     }
 
-    if (activeScopePillEl) {
-      if (isFleetMode) {
-        activeScopePillEl.textContent = 'MASTER FİLO KONTROLÜ';
-        activeScopePillEl.style.borderColor = '#f59e0b';
-        activeScopePillEl.style.color = '#f59e0b';
-      } else {
-        activeScopePillEl.textContent = 'SEÇİLİ ARAÇ KONTROLÜ';
-        activeScopePillEl.style.borderColor = '#00d2ff';
-        activeScopePillEl.style.color = '#00d2ff';
-      }
-    }
-
     // 3. Hız Kadranı (Cluster Göstergesi)
     if (gauge) {
-      gauge.setSpeed(v.current_speed, v.max_speed);
+      gauge.setSpeed(v.current_speed || 0, v.max_speed || 220);
     }
 
     // 4. Gaz Pedalı (SPN 91)
@@ -403,7 +431,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (brakeBarFillEl) brakeBarFillEl.style.height = `${Math.min(100, Math.max(0, brakePct))}%`;
     if (brakeReadoutEl) brakeReadoutEl.textContent = `%${Math.round(brakePct)}`;
 
-    // 6. Modern PRND Vites Göstergesi (SPN 523)
+    // 6. Sürüş HUD Alt Bilgileri (Devir, Yük, Cruise)
+    const rpmVal = v.engine_rpm || (v.current_speed > 0.5 ? 2100 : 750);
+    const loadVal = v.engine_load_pct !== undefined ? v.engine_load_pct : 32.5;
+    if (telemetryRpmVal) telemetryRpmVal.textContent = `${rpmVal.toLocaleString()} RPM`;
+    if (telemetryLoadVal) telemetryLoadVal.textContent = `%${loadVal.toFixed(1)}`;
+    if (telemetryCruiseVal) {
+      const isCruise = v.current_speed > 40 && !v.brake_pressed;
+      telemetryCruiseVal.textContent = isCruise ? 'AKTİF (ON)' : 'DEVRE DIŞI';
+      telemetryCruiseVal.style.color = isCruise ? '#10b981' : '#64748b';
+    }
+
+    // 7. Modern PRND Vites Göstergesi (SPN 523)
     const currentGear = v.gear || "P";
     if (activeGearBigBadgeEl) activeGearBigBadgeEl.textContent = currentGear;
 
@@ -412,72 +451,135 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prndNEl) prndNEl.classList.toggle('active', currentGear === 'N');
     if (prndDEl) prndDEl.classList.toggle('active', currentGear.startsWith('D') || currentGear === 'D');
 
-    // 7. Enerji & Batarya / Yakıt Durumu (EV / Hibrit / Benzin-Dizel)
+    // 8. Sürüş Durumu & Eko Skor
+    if (telemetryDriveStatus) {
+      if ((v.current_speed || 0) < 0.5) {
+        telemetryDriveStatus.textContent = '🔴 PARK / RÖLANTİ';
+        telemetryDriveStatus.style.color = '#94a3b8';
+      } else if (v.brake_pressed) {
+        telemetryDriveStatus.textContent = '🛑 FRENLEME REJİMİ';
+        telemetryDriveStatus.style.color = '#f43f5e';
+      } else if (v.current_speed > 90) {
+        telemetryDriveStatus.textContent = '🟢 OTOYOL SEYRİ';
+        telemetryDriveStatus.style.color = '#00d2ff';
+      } else {
+        telemetryDriveStatus.textContent = '🟢 ŞEHİR İÇİ SEYRİ';
+        telemetryDriveStatus.style.color = '#10b981';
+      }
+    }
+    if (telemetryEcoScoreVal) {
+      telemetryEcoScoreVal.textContent = `%${v.eco_score || 94} (İdeal)`;
+    }
+
+    // 9. DOMAIN 1: ENERJİ, BATARYA & YAKIT TELEMETRİSİ
     if (v.powertrain === 'ev' || v.is_ev) {
-      const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 95.0;
+      const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 94.2;
       const soh = v.battery_soh !== undefined && v.battery_soh !== null ? v.battery_soh : 99.0;
-      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '🔋 HV Batarya Telemetrisi';
-      if (energyBoxPgnEl) {
-        energyBoxPgnEl.textContent = 'PGN 0xFE56 (HVS)';
-        energyBoxPgnEl.style.color = '#10b981';
-      }
-      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'BATARYA ŞARJI (SOC)';
-      if (energyPrimaryValEl) {
-        energyPrimaryValEl.textContent = `%${soc.toFixed(1)}`;
-        energyPrimaryValEl.style.color = '#10b981';
-      }
-      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'BATARYA SAĞLIĞI (SOH)';
-      if (energySecondaryValEl) {
-        energySecondaryValEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
-        energySecondaryValEl.style.color = '#94a3b8';
-      }
+      const range = v.remaining_range_km || Math.round((soc / 100) * 450);
+      const cons = v.instant_consumption || 16.8;
+
+      if (domainEnergyTitle) domainEnergyTitle.innerHTML = '⚡ HV BATARYA & ENERJİ YÖNETİMİ';
+      if (domainEnergyPgn) domainEnergyPgn.textContent = 'PGN 0xFE56 (HVS) · 10 Hz';
+      
+      if (kpiEnergyLevelLabel) kpiEnergyLevelLabel.textContent = 'BATARYA ŞARJI (SOC)';
+      if (kpiEnergyLevelVal) { kpiEnergyLevelVal.textContent = `%${soc.toFixed(1)}`; kpiEnergyLevelVal.style.color = '#10b981'; }
+      if (kpiEnergyLevelSub) kpiEnergyLevelSub.textContent = `Sağlık (SOH): %${soh.toFixed(1)}`;
+
+      if (kpiRangeLabel) kpiRangeLabel.textContent = 'KALAN ELEKTRİK MENZİLİ';
+      if (kpiRangeVal) { kpiRangeVal.textContent = `${range} km`; kpiRangeVal.style.color = '#00d2ff'; }
+      if (kpiConsumptionVal) kpiConsumptionVal.textContent = `Anlık: ${cons.toFixed(1)} kWh/100km`;
+
+      if (kpiSecondaryEnergyLabel) kpiSecondaryEnergyLabel.textContent = 'BATARYA SICAKLIĞI';
+      if (kpiSecondaryEnergyVal) { kpiSecondaryEnergyVal.textContent = `${(v.battery_temp_c || 28.5).toFixed(1)} °C`; kpiSecondaryEnergyVal.style.color = '#a855f7'; }
+      if (kpiSecondaryEnergySub) kpiSecondaryEnergySub.textContent = 'Optimum Termal Aralık';
+
+      if (kpiElectricalLabel) kpiElectricalLabel.textContent = 'HV PAKET VOLTAJ & AKIM';
+      if (kpiElectricalVal) { kpiElectricalVal.textContent = `${(v.battery_voltage || 395.2).toFixed(1)} V`; kpiElectricalVal.style.color = '#f59e0b'; }
+      if (kpiElectricalSub) kpiElectricalSub.textContent = `Çekilen Akım: ${(v.battery_current || 36.4).toFixed(1)} A`;
+
     } else if (v.powertrain === 'hybrid') {
       const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 65.0;
-      const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 80.0;
-      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '🌿 Hibrit Batarya & Yakıt';
-      if (energyBoxPgnEl) {
-        energyBoxPgnEl.textContent = 'PGN 0xFE56 & 0xFEFC';
-        energyBoxPgnEl.style.color = '#10b981';
-      }
-      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'HEV BATARYA (SOC)';
-      if (energyPrimaryValEl) {
-        energyPrimaryValEl.textContent = `%${soc.toFixed(1)}`;
-        energyPrimaryValEl.style.color = '#10b981';
-      }
-      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'YAKIT DEPOSU (SPN 96)';
-      if (energySecondaryValEl) {
-        energySecondaryValEl.textContent = `%${fuel.toFixed(1)}`;
-        energySecondaryValEl.style.color = '#f59e0b';
-      }
+      const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 82.0;
+      const range = v.remaining_range_km || Math.round((fuel / 100) * 750 + (soc / 100) * 50);
+      const cons = v.instant_consumption || 4.5;
+
+      if (domainEnergyTitle) domainEnergyTitle.innerHTML = '🌿 HİBRİT BATARYA & YAKIT TELEMETRİSİ';
+      if (domainEnergyPgn) domainEnergyPgn.textContent = 'PGN 0xFE56 & 0xFEFC';
+
+      if (kpiEnergyLevelLabel) kpiEnergyLevelLabel.textContent = 'HEV BATARYA (SOC)';
+      if (kpiEnergyLevelVal) { kpiEnergyLevelVal.textContent = `%${soc.toFixed(1)}`; kpiEnergyLevelVal.style.color = '#10b981'; }
+      if (kpiEnergyLevelSub) kpiEnergyLevelSub.textContent = `Yakıt Deposu: %${fuel.toFixed(1)}`;
+
+      if (kpiRangeLabel) kpiRangeLabel.textContent = 'KALAN HİBRİT MENZİL';
+      if (kpiRangeVal) { kpiRangeVal.textContent = `${range} km`; kpiRangeVal.style.color = '#00d2ff'; }
+      if (kpiConsumptionVal) kpiConsumptionVal.textContent = `Ortalama: ${cons.toFixed(1)} L/100km`;
+
+      if (kpiSecondaryEnergyLabel) kpiSecondaryEnergyLabel.textContent = 'YAKIT DEPOSU (SPN 96)';
+      if (kpiSecondaryEnergyVal) { kpiSecondaryEnergyVal.textContent = `%${fuel.toFixed(1)}`; kpiSecondaryEnergyVal.style.color = '#f59e0b'; }
+      if (kpiSecondaryEnergySub) kpiSecondaryEnergySub.textContent = 'Dahili Yakıt Kapasitesi';
+
+      if (kpiElectricalLabel) kpiElectricalLabel.textContent = '12V SİSTEM AKÜSÜ';
+      if (kpiElectricalVal) { kpiElectricalVal.textContent = `${(v.battery_12v || 14.1).toFixed(1)} V`; kpiElectricalVal.style.color = '#10b981'; }
+      if (kpiElectricalSub) kpiElectricalSub.textContent = 'DC-DC Dönüştürücü Devrede';
+
     } else {
-      // Benzin / Dizel İçten Yanmalı
       const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85.0;
-      const v12 = v.battery_12v !== undefined && v.battery_12v !== null ? v.battery_12v : 14.2;
-      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '⛽ Yakıt & 12V Akü Telemetrisi';
-      if (energyBoxPgnEl) {
-        energyBoxPgnEl.textContent = 'PGN 0xFEFC (DASH)';
-        energyBoxPgnEl.style.color = '#f59e0b';
+      const range = v.remaining_range_km || Math.round((fuel / 100) * 820);
+      const cons = v.instant_consumption || 6.2;
+      const hasAdblue = v.adblue_pct !== undefined && v.adblue_pct !== null;
+
+      if (domainEnergyTitle) domainEnergyTitle.innerHTML = '⛽ YAKIT DEPOSU & AKÜ TELEMETRİSİ';
+      if (domainEnergyPgn) domainEnergyPgn.textContent = 'PGN 0xFEFC (DASH) · SPN 96';
+
+      if (kpiEnergyLevelLabel) kpiEnergyLevelLabel.textContent = 'YAKIT DEPOSU (SPN 96)';
+      if (kpiEnergyLevelVal) { kpiEnergyLevelVal.textContent = `%${fuel.toFixed(1)}`; kpiEnergyLevelVal.style.color = '#f59e0b'; }
+      if (kpiEnergyLevelSub) kpiEnergyLevelSub.textContent = 'Yakıt Seviyesi Normal';
+
+      if (kpiRangeLabel) kpiRangeLabel.textContent = 'TAHMİNİ KALAN MENZİL';
+      if (kpiRangeVal) { kpiRangeVal.textContent = `${range} km`; kpiRangeVal.style.color = '#00d2ff'; }
+      if (kpiConsumptionVal) kpiConsumptionVal.textContent = `Anlık: ${cons.toFixed(1)} L/100km`;
+
+      if (kpiSecondaryEnergyLabel) kpiSecondaryEnergyLabel.textContent = hasAdblue ? 'ADBLUE / DEF SEVİYESİ' : '12V SİSTEM AKÜSÜ';
+      if (kpiSecondaryEnergyVal) {
+        kpiSecondaryEnergyVal.textContent = hasAdblue ? `%${v.adblue_pct.toFixed(1)}` : `${(v.battery_12v || 14.2).toFixed(1)} V`;
+        kpiSecondaryEnergyVal.style.color = hasAdblue ? '#00d2ff' : '#10b981';
       }
-      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'YAKIT SEVİYESİ (SPN 96)';
-      if (energyPrimaryValEl) {
-        energyPrimaryValEl.textContent = `%${fuel.toFixed(1)}`;
-        energyPrimaryValEl.style.color = '#f59e0b';
-      }
-      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = '12V AKÜ (SPN 168)';
-      if (energySecondaryValEl) {
-        energySecondaryValEl.textContent = `${v12.toFixed(1)} V (Normal)`;
-        energySecondaryValEl.style.color = '#94a3b8';
-      }
+      if (kpiSecondaryEnergySub) kpiSecondaryEnergySub.textContent = hasAdblue ? 'SPN 1761 Emisyon Sıvısı' : 'SPN 168 Şarj Voltajı';
+
+      if (kpiElectricalLabel) kpiElectricalLabel.textContent = 'ALTERNATÖR & ŞARJ DURUMU';
+      if (kpiElectricalVal) { kpiElectricalVal.textContent = `${(v.battery_12v || 14.2).toFixed(1)} V`; kpiElectricalVal.style.color = '#10b981'; }
+      if (kpiElectricalSub) kpiElectricalSub.textContent = 'Şarj Devresi Aktif (14.2V)';
     }
 
-    // 7. Hız Slider'ı
-    if (speedSliderEl && !speedSliderEl.matches(':active')) {
-      speedSliderEl.max = v.max_speed;
-      speedSliderEl.value = Math.round(v.target_speed);
-      if (speedSliderValEl) speedSliderValEl.textContent = `${Math.round(v.target_speed)} KM/H`;
+    // 10. DOMAIN 2: MOTOR & MEKANİK SAĞLIK
+    if (kpiCoolantVal) kpiCoolantVal.textContent = `${(v.coolant_temp_c || 88.5).toFixed(1)} °C`;
+    if (kpiOilVal) {
+      if (v.powertrain === 'ev' || v.is_ev) {
+        kpiOilVal.textContent = 'N/A (Elektrikli)';
+        kpiOilVal.style.color = '#94a3b8';
+      } else {
+        kpiOilVal.textContent = `${(v.oil_temp_c || 92.0).toFixed(1)} °C · ${(v.oil_pressure_bar || 3.8).toFixed(1)} bar`;
+        kpiOilVal.style.color = '#f59e0b';
+      }
     }
+    if (kpiTransTempVal) kpiTransTempVal.textContent = `${(v.transmission_temp_c || 74.2).toFixed(1)} °C`;
+    if (kpiEngineHoursVal) kpiEngineHoursVal.textContent = `${(v.engine_hours || 1285.4).toFixed(1)} h`;
 
-    // 8. J1939 Inspector
+    // 11. DOMAIN 3: ODOMETRE, SEYAHAT & GPS KONUM
+    if (kpiOdometerVal) {
+      const odo = v.odometer_km || 48290.4;
+      kpiOdometerVal.textContent = `${odo.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
+    }
+    if (kpiTripVal) kpiTripVal.textContent = `${(v.trip_km || 142.8).toFixed(1)} km`;
+    if (kpiGpsCoordsVal) kpiGpsCoordsVal.textContent = `${v.gps_lat || '40.9850'}° N, ${v.gps_lng || '29.0820'}° E`;
+    if (kpiGpsLocName) kpiGpsLocName.textContent = v.gps_location_name || 'TEM Otoyolu / İstanbul';
+    if (kpiDtcVal) kpiDtcVal.textContent = '0 HATA (TEMİZ)';
+
+    // 12. DOMAIN 4: GÜVENLİK & TPMS
+    if (safetyTpmsVal) safetyTpmsVal.textContent = `${v.tpms_bar || 2.3} bar (Ön & Arka Dengeli)`;
+    if (safetyDoorsVal) safetyDoorsVal.textContent = `${v.doors_locked ? 'Kapılar Kilitli' : 'Kapılar Açık'} · ${v.seatbelt_ok !== false ? 'Kemerler Takılı' : 'Kemer İkazı'}`;
+
+    // 13. J1939 CAN Inspector
     const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
     const priority = 6;
     const pgn = 65265;
@@ -490,7 +592,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inspPriorityEl) inspPriorityEl.textContent = `${priority} (Normal)`;
     if (inspSaEl) inspSaEl.textContent = saHex;
 
-    const rawSpeed = Math.round(v.current_speed * 256);
+    const rawSpeed = Math.round((v.current_speed || 0) * 256);
     const b1 = rawSpeed & 0xFF;
     const b2 = (rawSpeed >> 8) & 0xFF;
     const b4 = v.brake_pressed ? 0xFD : 0xFC;
@@ -514,165 +616,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (spnFormulaHintEl) {
       if (v.powertrain === 'ev' || v.is_ev) {
         spnFormulaHintEl.innerHTML = `
-          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+          SPN 84 Hız = <strong>${(v.current_speed || 0).toFixed(2)} km/h</strong> | 
+          SPN 190 Motor Devri = <strong>${rpmVal} RPM</strong> | 
           SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
-          SPN 523 Vites = <strong>${currentGear}</strong> | 
-          SPN 3543 HV Batarya = <strong>%${(v.battery_soc || 95).toFixed(1)}</strong>
-        `;
-      } else if (v.powertrain === 'hybrid') {
-        spnFormulaHintEl.innerHTML = `
-          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
-          SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
-          SPN 523 Vites = <strong>${currentGear}</strong> | 
-          SPN 96 Yakıt = <strong>%${(v.fuel_level_pct || 80).toFixed(1)}</strong> | 
-          SPN 3543 HEV = <strong>%${(v.battery_soc || 65).toFixed(1)}</strong>
+          SPN 3543 Batarya = <strong>%${(v.battery_soc || 95).toFixed(1)}</strong>
         `;
       } else {
         spnFormulaHintEl.innerHTML = `
-          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+          SPN 84 Hız = <strong>${(v.current_speed || 0).toFixed(2)} km/h</strong> | 
+          SPN 190 Motor Devri = <strong>${rpmVal} RPM</strong> | 
           SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
-          SPN 523 Vites = <strong>${currentGear}</strong> | 
-          SPN 96 Yakıt Deposu = <strong>%${(v.fuel_level_pct || 85).toFixed(1)}</strong> | 
-          SPN 168 Akü = <strong>14.2V</strong>
+          SPN 110 Hararet = <strong>${(v.coolant_temp_c || 88.5).toFixed(1)} °C</strong>
         `;
       }
     }
   }
 
-  // 6. Komut Gönderme Fonksiyonları (Çift Kanallı: WS + REST API Fallback)
-  function applySpeed(speed) {
-    const spd = Math.max(0, parseFloat(speed) || 0);
-
-    if (isFleetMode) {
-      fleet.forEach(v => {
-        v.target_speed = Math.min(v.max_speed, spd);
-      });
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'set_fleet_speed', speed: spd }));
-      }
-      fetch('/api/fleet/speed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: spd })
-      }).catch(() => {});
-    } else {
-      const v = fleet.find(item => item.id === selectedVehicleId);
-      if (v) {
-        v.target_speed = Math.min(v.max_speed, spd);
-      }
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'set_speed', vehicle_id: selectedVehicleId, speed: spd }));
-      }
-      fetch(`/api/vehicle/${selectedVehicleId}/speed`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ speed: spd, mode: 'manual' })
-      }).catch(() => {});
-    }
-
-    if (speedSliderEl && !speedSliderEl.matches(':active')) {
-      speedSliderEl.value = Math.round(spd);
-      speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
-    }
-  }
-
-  function applyAccelerate(delta = 20.0) {
-    const v = fleet.find(item => item.id === selectedVehicleId);
-    const baseSpeed = v ? Math.max(v.current_speed, v.target_speed) : 0;
-    applySpeed(baseSpeed + delta);
-  }
-
-  function applyDecelerate(delta = 20.0) {
-    const v = fleet.find(item => item.id === selectedVehicleId);
-    const baseSpeed = v ? v.current_speed : 0;
-    applySpeed(Math.max(0, baseSpeed - delta));
-  }
-
-  function applyFullStop() {
-    applySpeed(0.0);
-    if (!isFleetMode && selectedVehicleId) {
-      fetch(`/api/vehicle/${selectedVehicleId}/brake`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pressed: true })
-      }).catch(() => {});
-    }
-  }
-
-  function applyScenario(scenario) {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'set_scenario', scenario: scenario }));
-    } else {
-      fetch('/api/fleet/scenario', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: scenario })
-      });
-    }
-  }
-
-  // 7. Kontrol Olay Dinleyicileri
-  tabSingleVehicleEl.addEventListener('click', () => {
-    isFleetMode = false;
-    tabSingleVehicleEl.classList.add('active');
-    tabFleetModeEl.classList.remove('active');
-    sliderLabelEl.textContent = 'Hedef Hız:';
-    updateSelectedVehicleView(true);
-  });
-
-  tabFleetModeEl.addEventListener('click', () => {
-    isFleetMode = true;
-    tabFleetModeEl.classList.add('active');
-    tabSingleVehicleEl.classList.remove('active');
-    sliderLabelEl.textContent = 'Filo Hedef Hızı:';
-    updateSelectedVehicleView(true);
-  });
-
-  speedSliderEl.addEventListener('input', (e) => {
-    const spd = parseFloat(e.target.value);
-    speedSliderValEl.textContent = `${Math.round(spd)} KM/H`;
-    applySpeed(spd);
-  });
-
-  document.querySelectorAll('.btn-preset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const spd = parseFloat(btn.dataset.speed);
-      speedSliderEl.value = spd;
-      speedSliderValEl.textContent = `${spd} KM/H`;
-      applySpeed(spd);
-    });
-  });
-
-  btnThrottleEl.addEventListener('click', () => {
-    applyAccelerate(10.0);
-  });
-
-  btnBrakeGradualEl.addEventListener('click', () => {
-    applyDecelerate(15.0);
-  });
-
-  btnBrakeFullEl.addEventListener('click', () => {
-    applyFullStop();
-  });
-
-  document.querySelectorAll('.btn-scenario').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const scen = btn.dataset.scenario;
-      applyScenario(scen);
-    });
-  });
-
-  btnEmergencyStopEl.addEventListener('click', () => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ action: 'emergency_stop' }));
-    } else {
-      fetch('/api/fleet/emergency-stop', { method: 'POST' });
-    }
-  });
-
-  // 7.1. Doğrudan Tarayıcıdan Araç Fotoğrafı Yükleme (Web UI File Upload)
+  // 6. Doğrudan Tarayıcıdan Araç Fotoğrafı Yükleme (Web UI File Upload)
   const carPhotoFileInput = document.getElementById('carPhotoFileInput');
   if (carPhotoFileInput) {
     carPhotoFileInput.addEventListener('change', async (e) => {
@@ -703,7 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7.2. Seçili Aracı Filodan Silme / Kaldırma
+  // 7. Seçili Aracı Filodan Silme / Kaldırma
   const btnDeleteVehicle = document.getElementById('btnDeleteVehicle');
   if (btnDeleteVehicle) {
     btnDeleteVehicle.addEventListener('click', async () => {
@@ -724,7 +684,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         const data = await res.json();
         if (res.ok && data.status === 'ok') {
-          // Yerel filodan çıkar
           fleet = fleet.filter(item => item.id !== v.id);
           if (fleet.length > 0) {
             selectedVehicleId = fleet[0].id;
@@ -745,7 +704,67 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 8. CAN Sniffer
+  // 8. Tüm Filo Telematik Verilerini CSV Raporu Olarak İndirme
+  if (btnExportFleetTelematics) {
+    btnExportFleetTelematics.addEventListener('click', () => {
+      if (fleet.length === 0) {
+        alert('Dışa aktarılacak telematik verisi yok!');
+        return;
+      }
+
+      const headers = [
+        'Plaka', 'Marka', 'Model', 'Kategori', 'Aktarma_Organi', 'J1939_SA',
+        'Hiz_kmh', 'Motor_Devri_RPM', 'Vites', 'Gaz_Pedali_Pct', 'Fren_Pedali_Pct',
+        'Motor_Yuku_Pct', 'Sogutma_Suyu_C', 'Yag_Sicakligi_C', 'Yag_Basinci_bar',
+        'Sanziman_Sicakligi_C', 'Batarya_SOC_Pct', 'Batarya_SOH_Pct', 'Yakit_Deposu_Pct',
+        'Kalan_Menzil_km', 'Anlik_Tuketim', 'Toplam_Odometre_km', 'Gunluk_Trip_km',
+        'Motor_Calisma_Saati_h', 'Eko_Skor', 'DTC_Ariza_Sayisi', 'GPS_Enlem', 'GPS_Boylam', 'Konum_Adi'
+      ];
+
+      const rows = fleet.map(v => [
+        `"${v.plate || ''}"`,
+        `"${v.brand_name || ''}"`,
+        `"${v.model || ''}"`,
+        `"${v.category || ''}"`,
+        `"${v.powertrain || ''}"`,
+        `"0x${(v.source_address || 0).toString(16).toUpperCase().padStart(2, '0')}"`,
+        (v.current_speed || 0).toFixed(1),
+        v.engine_rpm || (v.current_speed > 0.5 ? 2100 : 750),
+        `"${v.gear || 'D'}"`,
+        (v.throttle_pct || 0).toFixed(1),
+        (v.brake_pct || 0).toFixed(1),
+        (v.engine_load_pct !== undefined ? v.engine_load_pct : 32.5).toFixed(1),
+        (v.coolant_temp_c || 88.5).toFixed(1),
+        v.oil_temp_c ? v.oil_temp_c.toFixed(1) : 'N/A',
+        v.oil_pressure_bar ? v.oil_pressure_bar.toFixed(1) : 'N/A',
+        (v.transmission_temp_c || 74.2).toFixed(1),
+        v.battery_soc !== null && v.battery_soc !== undefined ? v.battery_soc.toFixed(1) : 'N/A',
+        v.battery_soh !== null && v.battery_soh !== undefined ? v.battery_soh.toFixed(1) : 'N/A',
+        v.fuel_level_pct !== null && v.fuel_level_pct !== undefined ? v.fuel_level_pct.toFixed(1) : 'N/A',
+        v.remaining_range_km || 450,
+        `"${v.instant_consumption || 6.2} ${v.consumption_unit || 'L/100km'}"`,
+        (v.odometer_km || 18500).toFixed(1),
+        (v.trip_km || 42.5).toFixed(1),
+        (v.engine_hours || 640).toFixed(1),
+        v.eco_score || 94,
+        v.dtc_count || 0,
+        v.gps_lat || 40.9850,
+        v.gps_lng || 29.0820,
+        `"${v.gps_location_name || 'TEM Otoyolu'}"`
+      ]);
+
+      const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `j1939_filo_telematik_raporu_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+  }
+
+  // 9. CAN Sniffer
   function processSnifferFrame(frame) {
     canLogList.unshift(frame);
     if (canLogList.length > maxSnifferRows) canLogList.pop();
@@ -819,17 +838,17 @@ document.addEventListener('DOMContentLoaded', () => {
       `"${f.data_hex}"`,
       `"${f.signal_value}"`
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `j1939_multi_signals_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+    link.setAttribute('download', `j1939_can_sniffer_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   });
 
-  // 9. YENİ ARAÇ EKLEME MODAL VE FORM YÖNETİMİ
+  // 10. YENİ ARAÇ EKLEME MODAL VE FORM YÖNETİMİ
   const btnOpenAddVehicleModal = document.getElementById('btnOpenAddVehicleModal');
   const addVehicleModal = document.getElementById('addVehicleModal');
   const btnCloseModal = document.getElementById('btnCloseModal');
@@ -848,7 +867,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const modalCarFile = document.getElementById('modalCarFile');
 
   async function openAddVehicleModal() {
-    // 1. Sıradaki boş SA adresini çek
     try {
       const res = await fetch('/api/fleet/next-sa');
       const data = await res.json();
@@ -861,7 +879,6 @@ document.addEventListener('DOMContentLoaded', () => {
       modalSa.dataset.sa = 31;
     }
 
-    // 2. Marka Seçeneklerini Doldur
     modalBrandSelect.innerHTML = '';
     brands.forEach(b => {
       const opt = document.createElement('option');
@@ -896,7 +913,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnCancelModal.addEventListener('click', closeAddVehicleModal);
   }
 
-  // Backdrop'a tıklandığında kapat
   if (addVehicleModal) {
     addVehicleModal.addEventListener('click', (e) => {
       if (e.target === addVehicleModal) {
@@ -916,7 +932,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Güç Tipi (Elektrikli EV vs Benzin vs Hibrit) Değiştiğinde Alanları Güncelle
   document.querySelectorAll('input[name="modalPowertrain"]').forEach(radio => {
     radio.addEventListener('change', (e) => {
       const val = e.target.value;
@@ -946,7 +961,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const customColor = modalNewBrandColor.value || '#00d2ff';
 
-        // 1. Yeni Markayı Kaydet
         try {
           const brandRes = await fetch('/api/fleet/add-brand', {
             method: 'POST',
@@ -974,7 +988,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const maxSpeed = parseFloat(modalMaxSpeed.value) || 220;
       const sa = parseInt(modalSa.dataset.sa) || null;
 
-      // Güç & Aktarma Organı (Elektrikli mi?)
       const ptRadio = document.querySelector('input[name="modalPowertrain"]:checked');
       const powertrain = ptRadio ? ptRadio.value : 'ice';
       const isEv = (powertrain === 'ev');
@@ -989,7 +1002,7 @@ document.addEventListener('DOMContentLoaded', () => {
       formData.append('powertrain', powertrain);
       formData.append('is_ev', isEv);
       formData.append('max_speed', maxSpeed);
-      formData.append('default_speed', 0);
+      formData.append('default_speed', 110);
       if (sa) formData.append('source_address', sa);
 
       if (modalCarFile.files && modalCarFile.files[0]) {
@@ -1006,7 +1019,6 @@ document.addEventListener('DOMContentLoaded', () => {
           closeAddVehicleModal();
           alert(`✅ ${brandName} ${model} başarıyla filoya eklendi ve J1939 CAN Bus ağına dahil edildi!`);
           
-          // Listeyi anında yenile ve yeni aracı seç
           if (!fleet.some(v => v.id === data.vehicle.id)) {
             fleet.push(data.vehicle);
           }

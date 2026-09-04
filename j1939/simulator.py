@@ -176,19 +176,28 @@ class FleetSimulator:
 
     def _update_vehicle_physics(self, v: Dict[str, Any], dt: float) -> float:
         """
-        Gerçekçi Otomotiv Dinamiği:
-        - Hız hesabı (Aerodinamik sürtünme F_drag ~ v^2 ile)
-        - Gaz Pedalı Açıklığı (% 0-100)
-        - Fren Pedalı Basıncı (% 0-100)
-        - Vites Durumu (P/R/N/D1..D8)
-        - Batarya Seviyesi (SOC %) ve Sağlığı (SOH %)
+        Gerçekçi Otomotiv Dinamiği ve Kapsamlı Telematik Veri Motoru:
+        - Hız, Devir (RPM), Gaz/Fren Pedalları
+        - Motor Yükü, Soğutma Suyu, Yağ Sıcaklığı ve Yağ Basıncı
+        - Şanzıman Durumu & Sıcaklığı
+        - Enerji, HV Batarya SOC/SOH, Voltaj/Akım, Tüketim ve Menzil
+        - Odometre, Günlük Seyahat Mesafesi ve Motor Çalışma Saati
+        - GPS Konum Telemetiği, Eko-Skor ve Teşhis Durumu (DTC)
         """
         current = v["current_speed"]
         target = v["target_speed"]
         base_accel = v.get("acceleration_rate", 6.0)
         max_speed = v.get("max_speed", 250.0)
+        sa = int(v.get("source_address", 1))
         # EV kontrolü
         is_ev = v.get("is_ev", False) or "EV" in v.get("category", "") or "Elektrik" in v.get("engine", "") or "tesla" in v.get("brand_id", "") or v.get("powertrain") == "ev"
+
+        # Doğal otonom trafik akışı (küçük gerçekçi dalgalanmalar)
+        if random.random() < 0.01 and current > 20.0:
+            def_spd = float(v.get("default_speed") or 110.0)
+            if def_spd > 0:
+                v["target_speed"] = round(max(30.0, min(max_speed, def_spd + random.uniform(-4.0, 4.0))), 1)
+                target = v["target_speed"]
 
         diff = target - current
 
@@ -206,7 +215,7 @@ class FleetSimulator:
                     current += step
 
                 # Gaz pedalı konumu: Talep edilen ivmeyle orantılı
-                v["throttle_pct"] = round(min(100.0, max(25.0, 35.0 + min(65.0, diff * 3.5))), 1)
+                v["throttle_pct"] = round(min(100.0, max(22.0, 30.0 + min(70.0, diff * 3.5))), 1)
                 v["brake_pct"] = 0.0
                 v["brake_pressed"] = False
 
@@ -224,7 +233,7 @@ class FleetSimulator:
 
                 # Fren pedalı konumu: Yavaşlama şiddetiyle orantılı
                 v["throttle_pct"] = 0.0
-                v["brake_pct"] = round(min(100.0, max(30.0, min(100.0, abs(diff) * 4.0))), 1)
+                v["brake_pct"] = round(min(100.0, max(28.0, min(100.0, abs(diff) * 4.0))), 1)
                 v["brake_pressed"] = True
         else:
             current = target
@@ -232,30 +241,104 @@ class FleetSimulator:
             v["brake_pressed"] = False
             if current > 2.0:
                 # Sabit hızda (Cruise) hava direncini yenmek için gereken gaz miktarı (%10 - %30)
-                v["throttle_pct"] = round(min(32.0, 10.0 + (current / max_speed) * 20.0), 1)
+                v["throttle_pct"] = round(min(32.0, 10.0 + (current / max_speed) * 18.0), 1)
             else:
                 v["throttle_pct"] = 0.0
 
         # Vites durumunu güncelle
         v["current_speed"] = round(current, 2)
-        v["gear"] = self._calculate_gear(v["current_speed"], is_ev)
+        gear = self._calculate_gear(v["current_speed"], is_ev)
+        v["gear"] = gear
 
-        # Enerji / Yakıt / Batarya mikro tüketimi
+        # 1. Motor Devri (RPM - SPN 190)
+        if is_ev:
+            v["engine_rpm"] = int(current * 62.0) if current > 0.5 else 0
+        else:
+            if current < 0.5:
+                v["engine_rpm"] = 750 + int(random.uniform(-15, 15))
+            else:
+                gear_ratios = {"D1": 75, "D2": 48, "D3": 34, "D4": 26, "D5": 20, "D6": 16, "D7": 13, "D8": 11}
+                ratio = gear_ratios.get(gear, 22)
+                v["engine_rpm"] = int(min(5200, max(850, current * ratio + (v["throttle_pct"] * 3.5))))
+
+        # 2. Motor Yükü (% - SPN 92)
+        if current < 0.5:
+            v["engine_load_pct"] = 12.0
+        else:
+            v["engine_load_pct"] = round(min(100.0, max(15.0, v["throttle_pct"] * 0.85 + (current / max_speed) * 22.0)), 1)
+
+        # 3. Sıcaklıklar & Basınçlar (SPN 110, SPN 175, SPN 100, SPN 177)
+        if is_ev:
+            v["coolant_temp_c"] = round(34.0 + (current / max_speed) * 12.0, 1)
+            v["oil_temp_c"] = None
+            v["oil_pressure_bar"] = None
+            v["transmission_temp_c"] = round(42.0 + (current / max_speed) * 15.0, 1)
+        else:
+            v["coolant_temp_c"] = round(88.0 + (current / max_speed) * 4.5 + (v["engine_load_pct"] / 100.0) * 2.0, 1)
+            v["oil_temp_c"] = round(v["coolant_temp_c"] + 4.2, 1)
+            v["oil_pressure_bar"] = round(1.8 + (v["engine_rpm"] / 4000.0) * 2.4, 1) if current > 0.5 else 1.8
+            v["transmission_temp_c"] = round(74.0 + (current / max_speed) * 7.0, 1)
+
+        # 4. Enerji / Yakıt / Batarya Tüketimi & Menzil
         pt = v.get("powertrain", "ice")
         if pt == "ev" or is_ev:
             if current > 0.5:
                 drain = (current / 3600.0) * 0.005 * dt
                 v["battery_soc"] = round(max(10.0, float(v.get("battery_soc") or 95.0) - drain), 2)
+            v["battery_soh"] = float(v.get("battery_soh") or 99.0)
+            v["battery_temp_c"] = 28.5
+            v["battery_voltage"] = round(380.0 + (float(v.get("battery_soc") or 95.0) / 100.0) * 25.0, 1)
+            v["battery_current"] = round(12.0 + (v["throttle_pct"] / 100.0) * 85.0, 1) if current > 0.5 else 1.2
+            v["instant_consumption"] = round(14.8 + (current / 100.0) * 4.8 + (v["throttle_pct"] / 100.0) * 6.2, 1) if current > 0.5 else 0.4
+            v["consumption_unit"] = "kWh/100km"
+            v["remaining_range_km"] = int((float(v.get("battery_soc") or 95.0) / 100.0) * 460.0)
         elif pt == "hybrid":
             if current > 0.5:
                 v["battery_soc"] = round(max(20.0, float(v.get("battery_soc") or 65.0) - (current / 3600.0) * 0.003 * dt), 2)
                 v["fuel_level_pct"] = round(max(5.0, float(v.get("fuel_level_pct") or 82.0) - (current / 3600.0) * 0.004 * dt), 2)
+            v["battery_soh"] = float(v.get("battery_soh") or 98.0)
+            v["battery_12v"] = 14.1 if current > 0.5 else 12.6
+            v["instant_consumption"] = round(3.8 + (current / 100.0) * 2.2 + (v["throttle_pct"] / 100.0) * 3.4, 1) if current > 0.5 else 0.6
+            v["consumption_unit"] = "L/100km"
+            v["remaining_range_km"] = int((float(v.get("fuel_level_pct") or 82.0) / 100.0) * 740.0 + (float(v.get("battery_soc") or 65.0) / 100.0) * 55.0)
         else:
             v["battery_soc"] = None
             v["battery_soh"] = None
             if current > 0.5:
                 v["fuel_level_pct"] = round(max(5.0, float(v.get("fuel_level_pct") or 85.0) - (current / 3600.0) * 0.008 * dt), 2)
             v["battery_12v"] = 14.2 if current > 0.5 else 12.6
+            is_diesel = "dizel" in v.get("engine", "").lower() or "tdi" in v.get("model", "").lower() or "bluehdi" in v.get("model", "").lower() or "isuzu" in v.get("brand_id", "").lower()
+            if is_diesel:
+                v["adblue_pct"] = 89.0
+            v["instant_consumption"] = round(5.4 + (current / 100.0) * 3.1 + (v["throttle_pct"] / 100.0) * 5.0, 1) if current > 0.5 else 0.8
+            v["consumption_unit"] = "L/100km"
+            v["remaining_range_km"] = int((float(v.get("fuel_level_pct") or 85.0) / 100.0) * 820.0)
+
+        # 5. Odometre & Seyahat Telemetiği (SPN 917, SPN 244, SPN 247)
+        if "odometer_km" not in v:
+            v["odometer_km"] = round(18500.0 + (sa * 1420.0), 1)
+        if "trip_km" not in v:
+            v["trip_km"] = round(42.5 + (sa * 2.8), 1)
+        if "engine_hours" not in v:
+            v["engine_hours"] = round(640.0 + (sa * 45.0), 1)
+
+        if current > 0.5:
+            dist_km = (current / 3600.0) * dt
+            v["odometer_km"] = round(v["odometer_km"] + dist_km, 2)
+            v["trip_km"] = round(v["trip_km"] + dist_km, 2)
+            v["engine_hours"] = round(v["engine_hours"] + (dt / 3600.0), 3)
+
+        # 6. Güvenlik, Teşhis & GPS Bilgileri
+        v["eco_score"] = 94
+        v["dtc_count"] = 0
+        v["mil_status"] = "OK / NORMAL"
+        v["tpms_bar"] = 2.3
+        v["cruise_active"] = (current > 40.0 and not v.get("brake_pressed"))
+        v["seatbelt_ok"] = True
+        v["doors_locked"] = (current > 15.0)
+        v["gps_lat"] = round(40.9850 + (sa * 0.0075) + ((v["trip_km"] * 0.0004) % 0.05), 5)
+        v["gps_lng"] = round(29.0820 + (sa * 0.0110) + ((v["trip_km"] * 0.0008) % 0.08), 5)
+        v["gps_location_name"] = "Otoyol Koridoru (TEM / E-80)"
 
         v["status"] = "stopped" if current < 0.5 else ("braking" if v.get("brake_pressed") else ("accelerating" if target > current + 1.0 else "cruising"))
         return v["current_speed"]
