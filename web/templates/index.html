@@ -298,6 +298,48 @@
       color: #f59e0b !important;
       box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
     }
+    .btn-remove-vehicle {
+      background: rgba(244, 63, 94, 0.15) !important;
+      border: 1px solid rgba(244, 63, 94, 0.4) !important;
+      color: #f43f5e !important;
+      font-family: 'Chakra Petch', sans-serif !important;
+      font-size: 0.82rem !important;
+      font-weight: 700 !important;
+      padding: 8px 16px !important;
+      border-radius: 8px !important;
+      cursor: pointer !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      box-shadow: 0 0 15px rgba(244, 63, 94, 0.2) !important;
+      transition: all 0.2s ease !important;
+    }
+    .btn-remove-vehicle:hover {
+      background: rgba(244, 63, 94, 0.3) !important;
+      border-color: #f43f5e !important;
+      color: #fff !important;
+      box-shadow: 0 0 20px rgba(244, 63, 94, 0.4) !important;
+    }
+    .btn-card-delete {
+      background: rgba(244, 63, 94, 0.12) !important;
+      border: 1px solid rgba(244, 63, 94, 0.3) !important;
+      color: #fca5a5 !important;
+      border-radius: 4px !important;
+      padding: 2px 6px !important;
+      font-size: 0.72rem !important;
+      cursor: pointer !important;
+      transition: all 0.15s ease !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .btn-card-delete:hover {
+      background: rgba(244, 63, 94, 0.4) !important;
+      color: #fff !important;
+      border-color: #f43f5e !important;
+      box-shadow: 0 0 8px rgba(244, 63, 94, 0.5) !important;
+      transform: scale(1.1) !important;
+    }
     .btn-delete-vehicle {
       background: rgba(239, 68, 68, 0.22) !important;
       border: 1px solid rgba(239, 68, 68, 0.55) !important;
@@ -485,6 +527,9 @@
     <div class="header-actions" style="display:flex; gap:10px; align-items:center;">
       <button class="btn-add-vehicle" id="btnOpenAddVehicleModal" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; font-family: 'Chakra Petch', sans-serif; font-size: 0.82rem; font-weight: 700; padding: 8px 16px; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35); transition: all 0.2s ease;">
         ➕ YENİ ARAÇ EKLE
+      </button>
+      <button class="btn-remove-vehicle" id="btnOpenRemoveVehicleModal" title="Filodan Araç Çıkar / Sil">
+        🗑️ ARAÇ ÇIKAR
       </button>
       <button id="btnExportFleetTelematics" title="Tüm Filo Telematik Raporunu CSV Olarak İndir" style="background: rgba(0, 210, 255, 0.12); border: 1px solid rgba(0, 210, 255, 0.4); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.82rem; font-weight: 700; padding: 8px 16px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; backdrop-filter: blur(8px); transition: all 0.2s ease;">
         📥 TELEMATİK RAPORU (.CSV)
@@ -944,6 +989,57 @@
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
           <button type="button" id="btnCancelModal" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #f0f4fc; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">İptal</button>
           <button type="submit" id="btnSubmitAddVehicle" style="background: linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%); border: none; color: #07090e; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 9px 24px; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px rgba(0, 210, 255, 0.4);">🚗 FİLOYA EKLE</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- FİLODAN ARAÇ ÇIKARMA MODAL FORMU (GLASSMORPHISM RED ALERT POPUP) -->
+  <div class="modal-backdrop" id="removeVehicleModal" style="display: none; position: fixed; inset: 0; background: rgba(7, 9, 14, 0.85); backdrop-filter: blur(12px); z-index: 999; align-items: center; justify-content: center; padding: 20px;">
+    <div class="modal-card" style="background: #0d121d; border: 1px solid rgba(244, 63, 94, 0.4); border-radius: 16px; width: 100%; max-width: 520px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9); overflow: hidden; display: flex; flex-direction: column;">
+      
+      <!-- Modal Başlık -->
+      <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; background: rgba(244, 63, 94, 0.08);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.3rem;">🗑️</span>
+          <h3 style="font-family: 'Chakra Petch', sans-serif; font-size: 1.15rem; font-weight: 700; color: #fca5a5; margin: 0;">Filodan Araç Çıkar</h3>
+        </div>
+        <button id="btnCloseRemoveModal" type="button" style="background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+      </div>
+
+      <!-- Modal Form Gövdesi -->
+      <form id="removeVehicleForm" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+        
+        <div>
+          <label style="display: block; font-size: 0.8rem; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">Filodan Çıkarılacak Aracı Seçin *</label>
+          <select id="removeVehicleSelect" style="width: 100%; background: #131b2a; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 10px 12px; color: #fff; font-family: inherit; font-size: 0.9rem; outline: none;">
+            <!-- Dinamik araç listesi doldurulacak -->
+          </select>
+        </div>
+
+        <!-- Seçili Araç Canlı Önizleme Kartı -->
+        <div id="removeVehiclePreview" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 12px; display: flex; gap: 14px; align-items: center;">
+          <img id="removePreviewImg" src="/static/images/cars/bmw-320i.jpg" alt="Preview" style="width: 100px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15);">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <div id="removePreviewTitle" style="font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 0.95rem; color: #fff;">BMW 320i Sedan</div>
+            <div id="removePreviewSub" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8;">34 BMW 320 · SA: 0x01</div>
+            <div id="removePreviewBadge" style="font-size: 0.72rem; color: #f59e0b; font-weight: 600;">⛽ Benzin / Dizel</div>
+          </div>
+        </div>
+
+        <!-- Uyarı Notu -->
+        <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 8px; padding: 10px 12px; display: flex; gap: 10px; align-items: center;">
+          <span style="font-size: 1.1rem;">⚠️</span>
+          <div style="font-size: 0.78rem; color: #fca5a5; line-height: 1.4;">
+            Bu işlem seçilen aracı telematik sisteminden, CAN Bus J1939 simülasyonundan ve gösterge panelinden kalıcı olarak kaldıracaktır.
+          </div>
+        </div>
+
+        <!-- Form Butonları -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <button type="button" id="btnCancelRemoveModal" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #f0f4fc; padding: 9px 18px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">İptal</button>
+          <button type="submit" id="btnConfirmRemoveVehicle" style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); border: none; color: #fff; font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 0.9rem; padding: 9px 22px; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px rgba(244, 63, 94, 0.4); display: flex; align-items: center; gap: 6px;">🗑️ ARACI FİLODAN ÇIKAR</button>
         </div>
 
       </form>

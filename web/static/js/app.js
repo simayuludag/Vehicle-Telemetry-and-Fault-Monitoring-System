@@ -285,6 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="display:flex; gap:6px; align-items:center;">
             ${powertrainPillHtml}
             <div class="sa-pill">SA: 0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}</div>
+            <button class="btn-card-delete" data-del-id="${v.id}" title="${v.brand_name} ${v.model} aracını filodan çıkar">🗑️</button>
           </div>
         </div>
         
@@ -310,9 +311,19 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
 
+      // Kart tıklaması ile araç seçimi
       card.addEventListener('click', () => {
         selectVehicle(v.id);
       });
+
+      // Kart üzerindeki hızlı silme butonu
+      const cardDelBtn = card.querySelector('.btn-card-delete');
+      if (cardDelBtn) {
+        cardDelBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeVehicleById(v.id);
+        });
+      }
 
       fleetGridEl.appendChild(card);
     });
@@ -663,43 +674,47 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7. Seçili Aracı Filodan Silme / Kaldırma
+  // 7. Merkezi Araç Silme / Kaldırma Fonksiyonu ve Buton Bağlantısı
+  async function removeVehicleById(vehicleId) {
+    const v = fleet.find(item => item.id === vehicleId);
+    if (!v) {
+      alert('Kaldırılacak araç bulunamadı.');
+      return;
+    }
+
+    const confirmMsg = `"${v.brand_name} ${v.model} (${v.plate})"\n\nBu aracı filodan kaldırmak istediğinize emin misiniz?`;
+    if (!confirm(confirmMsg)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/vehicle/${v.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'ok') {
+        fleet = fleet.filter(item => item.id !== v.id);
+        if (selectedVehicleId === v.id) {
+          selectedVehicleId = fleet.length > 0 ? fleet[0].id : null;
+        }
+        renderBrandFilters();
+        renderFleetGrid();
+        updateSelectedVehicleView();
+        alert(`✅ "${v.brand_name} ${v.model}" başarıyla filodan kaldırıldı.`);
+      } else {
+        alert(`❌ Araç kaldırılamadı: ${data.detail || data.message || 'Bilinmeyen hata'}`);
+      }
+    } catch (err) {
+      console.error('Araç silme hatası:', err);
+      alert(`❌ Araç kaldırılırken hata oluştu: ${err.message}`);
+    }
+  }
+
   const btnDeleteVehicle = document.getElementById('btnDeleteVehicle');
   if (btnDeleteVehicle) {
-    btnDeleteVehicle.addEventListener('click', async () => {
-      const v = fleet.find(item => item.id === selectedVehicleId);
-      if (!v) {
-        alert('Kaldırılacak araç seçilmedi.');
-        return;
-      }
-
-      const confirmMsg = `"${v.brand_name} ${v.model} (${v.plate})"\n\nBu aracı filodan kaldırmak istediğinize emin misiniz?`;
-      if (!confirm(confirmMsg)) {
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/vehicle/${v.id}`, {
-          method: 'DELETE'
-        });
-        const data = await res.json();
-        if (res.ok && data.status === 'ok') {
-          fleet = fleet.filter(item => item.id !== v.id);
-          if (fleet.length > 0) {
-            selectedVehicleId = fleet[0].id;
-          } else {
-            selectedVehicleId = null;
-          }
-          renderBrandFilters();
-          renderFleetGrid();
-          updateSelectedVehicleView();
-          alert(`✅ "${v.brand_name} ${v.model}" başarıyla filodan kaldırıldı.`);
-        } else {
-          alert(`❌ Araç kaldırılamadı: ${data.detail || data.message || 'Bilinmeyen hata'}`);
-        }
-      } catch (err) {
-        console.error('Araç silme hatası:', err);
-        alert(`❌ Araç kaldırılırken hata oluştu: ${err.message}`);
+    btnDeleteVehicle.addEventListener('click', () => {
+      if (selectedVehicleId) {
+        removeVehicleById(selectedVehicleId);
       }
     });
   }
@@ -1033,6 +1048,108 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Araç ekleme hatası:', err);
         alert(`❌ Araç eklenirken bağlantı hatası: ${err.message}`);
       }
+    });
+  }
+
+  // 11. FİLODAN ARAÇ ÇIKARMA MODAL YÖNETİMİ
+  const btnOpenRemoveVehicleModal = document.getElementById('btnOpenRemoveVehicleModal');
+  const removeVehicleModal = document.getElementById('removeVehicleModal');
+  const btnCloseRemoveModal = document.getElementById('btnCloseRemoveModal');
+  const btnCancelRemoveModal = document.getElementById('btnCancelRemoveModal');
+  const removeVehicleForm = document.getElementById('removeVehicleForm');
+  const removeVehicleSelect = document.getElementById('removeVehicleSelect');
+  const removePreviewImg = document.getElementById('removePreviewImg');
+  const removePreviewTitle = document.getElementById('removePreviewTitle');
+  const removePreviewSub = document.getElementById('removePreviewSub');
+  const removePreviewBadge = document.getElementById('removePreviewBadge');
+
+  function updateRemoveVehiclePreview() {
+    if (!removeVehicleSelect) return;
+    const targetId = removeVehicleSelect.value;
+    const v = fleet.find(item => item.id === targetId);
+    if (!v) return;
+
+    if (removePreviewImg) {
+      removePreviewImg.src = v.image_url || `/static/images/cars/${v.id}.jpg`;
+    }
+    if (removePreviewTitle) {
+      removePreviewTitle.textContent = `${v.brand_name} ${v.model}`;
+    }
+    if (removePreviewSub) {
+      const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+      removePreviewSub.textContent = `${v.plate} · SA: ${saHex} · ${v.category}`;
+    }
+    if (removePreviewBadge) {
+      if (v.powertrain === 'ev' || v.is_ev) {
+        removePreviewBadge.textContent = '⚡ %100 Elektrikli (EV)';
+        removePreviewBadge.style.color = '#10b981';
+      } else if (v.powertrain === 'hybrid') {
+        removePreviewBadge.textContent = '🌿 Hibrit (HEV)';
+        removePreviewBadge.style.color = '#10b981';
+      } else {
+        const isDiesel = v.engine && v.engine.toLowerCase().includes('dizel');
+        removePreviewBadge.textContent = isDiesel ? '⛽ Dizel (ICE)' : '⛽ Benzinli (ICE)';
+        removePreviewBadge.style.color = '#f59e0b';
+      }
+    }
+  }
+
+  function openRemoveVehicleModal() {
+    if (fleet.length === 0) {
+      alert('Filoda çıkarılacak araç bulunmuyor.');
+      return;
+    }
+
+    removeVehicleSelect.innerHTML = '';
+    fleet.forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v.id;
+      const saHex = `0x${v.source_address.toString(16).toUpperCase().padStart(2, '0')}`;
+      opt.textContent = `${v.brand_name} ${v.model} (${v.plate} - SA: ${saHex})`;
+      if (v.id === selectedVehicleId) {
+        opt.selected = true;
+      }
+      removeVehicleSelect.appendChild(opt);
+    });
+
+    updateRemoveVehiclePreview();
+    removeVehicleModal.style.display = 'flex';
+  }
+
+  function closeRemoveVehicleModal() {
+    if (removeVehicleModal) {
+      removeVehicleModal.style.display = 'none';
+    }
+  }
+
+  if (btnOpenRemoveVehicleModal) {
+    btnOpenRemoveVehicleModal.addEventListener('click', openRemoveVehicleModal);
+  }
+  if (btnCloseRemoveModal) {
+    btnCloseRemoveModal.addEventListener('click', closeRemoveVehicleModal);
+  }
+  if (btnCancelRemoveModal) {
+    btnCancelRemoveModal.addEventListener('click', closeRemoveVehicleModal);
+  }
+  if (removeVehicleModal) {
+    removeVehicleModal.addEventListener('click', (e) => {
+      if (e.target === removeVehicleModal) {
+        closeRemoveVehicleModal();
+      }
+    });
+  }
+  if (removeVehicleSelect) {
+    removeVehicleSelect.addEventListener('change', updateRemoveVehiclePreview);
+  }
+
+  if (removeVehicleForm) {
+    removeVehicleForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const targetId = removeVehicleSelect.value;
+      if (!targetId) return;
+
+      closeRemoveVehicleModal();
+      await removeVehicleById(targetId);
     });
   }
 
