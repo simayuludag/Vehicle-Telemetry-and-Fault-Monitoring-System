@@ -240,10 +240,22 @@ class FleetSimulator:
         v["current_speed"] = round(current, 2)
         v["gear"] = self._calculate_gear(v["current_speed"], is_ev)
 
-        # Batarya mikro tüketimi (sürüş mesafesine bağlı hafif deşarj)
-        if current > 0.5:
-            drain = (current / 3600.0) * 0.005 * dt
-            v["battery_soc"] = round(max(10.0, v.get("battery_soc", 90.0) - drain), 2)
+        # Enerji / Yakıt / Batarya mikro tüketimi
+        pt = v.get("powertrain", "ice")
+        if pt == "ev" or is_ev:
+            if current > 0.5:
+                drain = (current / 3600.0) * 0.005 * dt
+                v["battery_soc"] = round(max(10.0, float(v.get("battery_soc") or 95.0) - drain), 2)
+        elif pt == "hybrid":
+            if current > 0.5:
+                v["battery_soc"] = round(max(20.0, float(v.get("battery_soc") or 65.0) - (current / 3600.0) * 0.003 * dt), 2)
+                v["fuel_level_pct"] = round(max(5.0, float(v.get("fuel_level_pct") or 82.0) - (current / 3600.0) * 0.004 * dt), 2)
+        else:
+            v["battery_soc"] = None
+            v["battery_soh"] = None
+            if current > 0.5:
+                v["fuel_level_pct"] = round(max(5.0, float(v.get("fuel_level_pct") or 85.0) - (current / 3600.0) * 0.008 * dt), 2)
+            v["battery_12v"] = 14.2 if current > 0.5 else 12.6
 
         v["status"] = "stopped" if current < 0.5 else ("braking" if v.get("brake_pressed") else ("accelerating" if target > current + 1.0 else "cruising"))
         return v["current_speed"]

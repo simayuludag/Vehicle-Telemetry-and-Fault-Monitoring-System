@@ -53,8 +53,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const prndREl = document.getElementById('prnd-R');
   const prndNEl = document.getElementById('prnd-N');
   const prndDEl = document.getElementById('prnd-D');
-  const batterySocTextEl = document.getElementById('batterySocText');
-  const batterySohTextEl = document.getElementById('batterySohText');
+  const energyBoxTitleEl = document.getElementById('energyBoxTitle');
+  const energyBoxPgnEl = document.getElementById('energyBoxPgn');
+  const energyPrimaryLabelEl = document.getElementById('energyPrimaryLabel');
+  const energyPrimaryValEl = document.getElementById('energyPrimaryVal');
+  const energySecondaryLabelEl = document.getElementById('energySecondaryLabel');
+  const energySecondaryValEl = document.getElementById('energySecondaryVal');
 
   // CAN Inspector DOM Elemanları
   const inspPgnBadgeEl = document.getElementById('inspPgnBadge');
@@ -221,6 +225,17 @@ document.addEventListener('DOMContentLoaded', () => {
       card.id = `card-${v.id}`;
       card.dataset.id = v.id;
 
+      // Enerji Hapı (EV: Batarya, Hibrit: HEV, Benzin/Dizel: Yakıt Deposu)
+      let energyPillHtml = '';
+      if (v.powertrain === 'ev' || v.is_ev) {
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🔋 %${Math.round(v.battery_soc || 95)}</span>`;
+      } else if (v.powertrain === 'hybrid') {
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#10b981">🌿 %${Math.round(v.battery_soc || 65)} (HEV)</span>`;
+      } else {
+        const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85;
+        energyPillHtml = `<span class="pill-soc" id="badge-energy-${v.id}" style="color:#f59e0b">⛽ %${Math.round(fuel)} (Yakıt)</span>`;
+      }
+
       card.innerHTML = `
         <div class="vehicle-card-top-row">
           <div class="brand-badge-pill" style="border-left: 3px solid ${brand.color}">
@@ -243,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div class="card-telemetry-pills">
           <span class="pill-gear" id="badge-gear-${v.id}">🕹️ ${v.gear || 'D'}</span>
-          <span class="pill-soc" id="badge-soc-${v.id}">🔋 %${Math.round(v.battery_soc || 90)}</span>
+          ${energyPillHtml}
           <span class="pill-throttle" id="badge-throttle-${v.id}">⚡ %${Math.round(v.throttle_pct || 0)}</span>
         </div>
 
@@ -267,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const barEl = document.getElementById(`speed-bar-${v.id}`);
       const badgeEl = document.getElementById(`status-badge-${v.id}`);
       const gearEl = document.getElementById(`badge-gear-${v.id}`);
-      const socEl = document.getElementById(`badge-soc-${v.id}`);
+      const energyEl = document.getElementById(`badge-energy-${v.id}`);
       const throttleEl = document.getElementById(`badge-throttle-${v.id}`);
 
       if (numEl) numEl.textContent = Math.round(v.current_speed);
@@ -277,7 +292,21 @@ document.addEventListener('DOMContentLoaded', () => {
         badgeEl.textContent = v.status;
       }
       if (gearEl) gearEl.textContent = `🕹️ ${v.gear || 'D'}`;
-      if (socEl) socEl.textContent = `🔋 %${Math.round(v.battery_soc || 90)}`;
+      
+      if (energyEl) {
+        if (v.powertrain === 'ev' || v.is_ev) {
+          energyEl.textContent = `🔋 %${Math.round(v.battery_soc || 95)}`;
+          energyEl.style.color = '#10b981';
+        } else if (v.powertrain === 'hybrid') {
+          energyEl.textContent = `🌿 %${Math.round(v.battery_soc || 65)} (HEV)`;
+          energyEl.style.color = '#10b981';
+        } else {
+          const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85;
+          energyEl.textContent = `⛽ %${Math.round(fuel)} (Yakıt)`;
+          energyEl.style.color = '#f59e0b';
+        }
+      }
+
       if (throttleEl) throttleEl.textContent = `⚡ %${Math.round(v.throttle_pct || 0)}`;
     });
   }
@@ -340,11 +369,54 @@ document.addEventListener('DOMContentLoaded', () => {
     if (prndNEl) prndNEl.classList.toggle('active', currentGear === 'N');
     if (prndDEl) prndDEl.classList.toggle('active', currentGear.startsWith('D') || currentGear === 'D');
 
-    // 6. Batarya SOC / SOH
-    const soc = v.battery_soc !== undefined ? v.battery_soc : 95.0;
-    const soh = v.battery_soh !== undefined ? v.battery_soh : 99.0;
-    if (batterySocTextEl) batterySocTextEl.textContent = `%${soc.toFixed(1)}`;
-    if (batterySohTextEl) batterySohTextEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
+    // 6. Enerji & Batarya / Yakıt Durumu (EV / Hibrit / Benzin-Dizel)
+    if (v.powertrain === 'ev' || v.is_ev) {
+      const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 95.0;
+      const soh = v.battery_soh !== undefined && v.battery_soh !== null ? v.battery_soh : 99.0;
+      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '🔋 HV Batarya Telemetrisi';
+      if (energyBoxPgnEl) {
+        energyBoxPgnEl.textContent = 'PGN 0xFE56 (HVS)';
+        energyBoxPgnEl.style.color = '#a855f7';
+      }
+      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'ŞARJ (SOC)';
+      if (energyPrimaryValEl) {
+        energyPrimaryValEl.textContent = `%${soc.toFixed(1)}`;
+        energyPrimaryValEl.style.color = '#10b981';
+      }
+      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'SAĞLIK (SOH)';
+      if (energySecondaryValEl) energySecondaryValEl.textContent = `%${soh.toFixed(1)} ${soh >= 95 ? 'Mükemmel' : 'İyi'}`;
+    } else if (v.powertrain === 'hybrid') {
+      const soc = v.battery_soc !== undefined && v.battery_soc !== null ? v.battery_soc : 65.0;
+      const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 80.0;
+      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '🌿 Hibrit Batarya & Yakıt';
+      if (energyBoxPgnEl) {
+        energyBoxPgnEl.textContent = 'PGN 0xFE56 & 0xFEFC';
+        energyBoxPgnEl.style.color = '#10b981';
+      }
+      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'HEV BATARYA (SOC)';
+      if (energyPrimaryValEl) {
+        energyPrimaryValEl.textContent = `%${soc.toFixed(1)}`;
+        energyPrimaryValEl.style.color = '#10b981';
+      }
+      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = 'YAKIT DEPOSU (SPN 96)';
+      if (energySecondaryValEl) energySecondaryValEl.textContent = `%${fuel.toFixed(1)}`;
+    } else {
+      // Benzin / Dizel İçten Yanmalı
+      const fuel = v.fuel_level_pct !== undefined && v.fuel_level_pct !== null ? v.fuel_level_pct : 85.0;
+      const v12 = v.battery_12v !== undefined && v.battery_12v !== null ? v.battery_12v : 14.2;
+      if (energyBoxTitleEl) energyBoxTitleEl.innerHTML = '⛽ Yakıt & 12V Akü Telemetrisi';
+      if (energyBoxPgnEl) {
+        energyBoxPgnEl.textContent = 'PGN 0xFEFC (DASH)';
+        energyBoxPgnEl.style.color = '#f59e0b';
+      }
+      if (energyPrimaryLabelEl) energyPrimaryLabelEl.textContent = 'YAKIT DEPOSU (SPN 96)';
+      if (energyPrimaryValEl) {
+        energyPrimaryValEl.textContent = `%${fuel.toFixed(1)}`;
+        energyPrimaryValEl.style.color = '#f59e0b';
+      }
+      if (energySecondaryLabelEl) energySecondaryLabelEl.textContent = '12V AKÜ (SPN 168)';
+      if (energySecondaryValEl) energySecondaryValEl.textContent = `${v12.toFixed(1)} V (Normal)`;
+    }
 
     // 7. Hız Slider'ı
     if (speedSliderEl && !speedSliderEl.matches(':active')) {
@@ -388,12 +460,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (spnFormulaHintEl) {
-      spnFormulaHintEl.innerHTML = `
-        SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
-        SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
-        SPN 523 Vites = <strong>${currentGear}</strong> | 
-        SPN 3543 Batarya = <strong>%${soc.toFixed(1)}</strong>
-      `;
+      if (v.powertrain === 'ev' || v.is_ev) {
+        spnFormulaHintEl.innerHTML = `
+          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+          SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
+          SPN 523 Vites = <strong>${currentGear}</strong> | 
+          SPN 3543 HV Batarya = <strong>%${(v.battery_soc || 95).toFixed(1)}</strong>
+        `;
+      } else if (v.powertrain === 'hybrid') {
+        spnFormulaHintEl.innerHTML = `
+          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+          SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
+          SPN 523 Vites = <strong>${currentGear}</strong> | 
+          SPN 96 Yakıt = <strong>%${(v.fuel_level_pct || 80).toFixed(1)}</strong> | 
+          SPN 3543 HEV = <strong>%${(v.battery_soc || 65).toFixed(1)}</strong>
+        `;
+      } else {
+        spnFormulaHintEl.innerHTML = `
+          SPN 84 Hız = <strong>${v.current_speed.toFixed(2)} km/h</strong> | 
+          SPN 91 Gaz = <strong>%${throttlePct.toFixed(1)}</strong> | 
+          SPN 523 Vites = <strong>${currentGear}</strong> | 
+          SPN 96 Yakıt Deposu = <strong>%${(v.fuel_level_pct || 85).toFixed(1)}</strong> | 
+          SPN 168 Akü = <strong>14.2V</strong>
+        `;
+      }
     }
   }
 

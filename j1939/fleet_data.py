@@ -913,6 +913,44 @@ def _save_custom_fleet():
         print(f"Özel filo verisi kaydedilirken hata: {e}")
 
 
+def _normalize_vehicle_powertrain(v: Dict[str, Any]) -> None:
+    """Aracın motor tipine göre (EV, Hibrit, Benzin/Dizel) batarya ve yakıt parametrelerini doğru yapılandırır"""
+    v_id = v.get("id", "").lower()
+    engine = v.get("engine", "")
+    brand_id = v.get("brand_id", "").lower()
+    pt = v.get("powertrain")
+
+    ev_ids = {"tesla-model-3-perf", "tesla-model-y-longrange", "tesla-model-s-plaid", "renault-megane-etech", "hyundai-ioniq-5", "fiat-500e", "togg-t10x"}
+    hybrid_ids = {"toyota-corolla-hybrid", "toyota-rav4-hybrid", "toyota-yaris-cross", "hyundai-tucson-hybrid", "fiat-egea-cross"}
+
+    if pt == "ev" or v_id in ev_ids or "tesla" in brand_id or "etech" in v_id or "500e" in v_id or "ioniq" in v_id or "Elektrik" in engine:
+        v["powertrain"] = "ev"
+        v["is_ev"] = True
+        v["fuel_level_pct"] = None
+        if v.get("battery_soc") is None:
+            v["battery_soc"] = 95.0
+        if v.get("battery_soh") is None:
+            v["battery_soh"] = 99.0
+    elif pt == "hybrid" or v_id in hybrid_ids or "hybrid" in v_id or "hibrit" in engine.lower():
+        v["powertrain"] = "hybrid"
+        v["is_ev"] = False
+        if v.get("battery_soc") is None:
+            v["battery_soc"] = 65.0
+        if v.get("battery_soh") is None:
+            v["battery_soh"] = 98.0
+        if v.get("fuel_level_pct") is None:
+            v["fuel_level_pct"] = 82.0
+        v["battery_12v"] = 14.1
+    else:
+        v["powertrain"] = "ice"
+        v["is_ev"] = False
+        v["battery_soc"] = None
+        v["battery_soh"] = None
+        if v.get("fuel_level_pct") is None:
+            v["fuel_level_pct"] = 85.0
+        v["battery_12v"] = 14.2
+
+
 def update_vehicle_image_url(vehicle_id: str, new_image_url: str) -> bool:
     """Belirli bir aracın görsel URL'sini günceller ve kaydeder"""
     for v in VEHICLES:
@@ -925,6 +963,8 @@ def update_vehicle_image_url(vehicle_id: str, new_image_url: str) -> bool:
 
 def get_all_vehicles() -> List[Dict[str, Any]]:
     """Tüm binek ve ticari araçların listesini döndürür"""
+    for v in VEHICLES:
+        _normalize_vehicle_powertrain(v)
     return VEHICLES
 
 
@@ -932,6 +972,7 @@ def get_vehicle_by_id(vehicle_id: str) -> Dict[str, Any]:
     """ID'ye göre araç döndürür"""
     for v in VEHICLES:
         if v["id"] == vehicle_id:
+            _normalize_vehicle_powertrain(v)
             return v
     raise KeyError(f"Araç bulunamadı: {vehicle_id}")
 

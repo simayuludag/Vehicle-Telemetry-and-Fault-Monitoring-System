@@ -435,20 +435,20 @@
             </div>
           </div>
 
-          <!-- Battery Box (SPN 3543 SOC & SPN 5328 SOH - PGN 65110 HVS) -->
-          <div class="telemetry-mini-box">
+          <!-- Energy / Battery / Fuel Box (Dynamic: EV / Hybrid / ICE) -->
+          <div class="telemetry-mini-box" id="energyTelemetryBox">
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; color:#94a3b8; text-transform:uppercase;">
-              <span>🔋 Batarya Telemetrisi</span>
-              <span style="color:#a855f7; font-family:'JetBrains Mono', monospace">PGN 0xFE56 (HVS)</span>
+              <span id="energyBoxTitle">🔋 Batarya Telemetrisi</span>
+              <span id="energyBoxPgn" style="color:#a855f7; font-family:'JetBrains Mono', monospace">PGN 0xFE56 (HVS)</span>
             </div>
             <div style="display:flex; align-items:center; justify-content:space-between;">
               <div>
-                <div style="font-size:0.68rem; color:#64748b">ŞARJ (SOC)</div>
-                <div style="font-family:'JetBrains Mono', monospace; font-size:1.15rem; font-weight:700; color:#10b981" id="batterySocText">%95.0</div>
+                <div style="font-size:0.68rem; color:#64748b" id="energyPrimaryLabel">ŞARJ (SOC)</div>
+                <div style="font-family:'JetBrains Mono', monospace; font-size:1.15rem; font-weight:700; color:#10b981" id="energyPrimaryVal">%95.0</div>
               </div>
               <div style="text-align:right">
-                <div style="font-size:0.68rem; color:#64748b">SAĞLIK (SOH)</div>
-                <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#94a3b8" id="batterySohText">%99.0 Mükemmel</div>
+                <div style="font-size:0.68rem; color:#64748b" id="energySecondaryLabel">SAĞLIK (SOH)</div>
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.75rem; color:#94a3b8" id="energySecondaryVal">%99.0 Mükemmel</div>
               </div>
             </div>
           </div>
