@@ -1,21 +1,24 @@
-# 🚗 SAE J1939 Araç Hız Sinyali ve Ayrık Web Telemetri Platformu
+# 🚗 SAE J1939 Araç Telematik & Filo İzleme Platformu
 
-Bu proje; piyasadaki **10 popüler binek, SUV ve elektrikli otomotiv markasından 3'er model (toplam 30 araç)** için **SAE J1939 standardında 29-bit CAN mesajları** ile hız sinyali (`PGN 65265 - CCVS`, `SPN 84 - Wheel-Based Vehicle Speed`) üreten, hız verme ortamı (**Sinyal Gönderici / Transmitter**) ile izleme ortamının (**Web Telemetri / Dashboard**) birbirinden tamamen ayrıldığı profesyonel bir telemetri sistemidir.
-
----
-
-## 🏗️ 1. İki Ayrık Bağımsız Ortam Mimarisi
-
-Sistem birbirini gerçek zamanlı CAN bus ve WebSocket üzerinden senkronize eden iki ayrı ortamdan oluşur:
-
-| Ortam | Erişim / Çalıştırma | Açıklama |
-| :--- | :--- | :--- |
-| 🕹️ **Ortam 1: Hız Verme & Sinyal Gönderici** | **Web:** `http://localhost:8000/control`<br>**CLI:** `python j1939_sender.py` | 30 araçtan birini seçip gaz/fren/slider ile hız verme ve J1939 CAN paketlerini hatta basma paneli. |
-| 📺 **Ortam 2: Canlı Web İzleme & Gösterge** | **Web:** `http://localhost:8000/` | Büyük analog/dijital hız göstergesi (Speedometer), 30 aracın anlık hız durumları ve canlı J1939 CAN Sniffer ekranı. |
+Bu proje; binek, hafif ticari, ağır vasıta ve elektrikli otomotiv modelleri için **SAE J1939 / FMS / OBD-II standartlarında 29-bit CAN mesajları** ile canlı telemetri (`PGN 65265 - CCVS`, `SPN 84 - Hız`, `PGN 61443 - EEC2`, `PGN 61445 - ETC2`, `PGN 65110 - HVS`) üreten ve kurumsal telematik merkezleri seviyesinde izleme sunan gelişmiş bir filo telemetri platformudur.
 
 ---
 
-## 🚗 2. 10 Popüler Otomobil Markası & 30 Model Filosu
+## 🌟 1. Öne Çıkan Özellikler
+
+- **🏎️ Siber-Otomotiv Hypercar HUD:** Lazer ışımalı HTML5 canvas kadran, dinamik hız yayı, dikey neon gaz/fren pedalları ve PRND aktif vites şasisi.
+- **📊 4 Canlı Telematik Domaini:**
+  1. **⚡ Enerji, Batarya & Yakıt Yönetimi:** EV HV Batarya SOC/SOH, Batarya Sıcaklığı/Voltaj/Akım, Kalan Menzil, Yakıt Seviyesi (SPN 96), AdBlue/DEF (SPN 1761).
+  2. **🩺 Motor, Şanzıman & Mekanik Sağlık:** Radyatör Soğutma Suyu (SPN 110), Motor Yağ Sıcaklığı (SPN 175), Yağ Basıncı (SPN 100), Şanzıman Sıcaklığı (SPN 177), Toplam Motor Saati (SPN 247).
+  3. **📍 Odometre, Seyahat & GPS Telematik:** Toplam Kilometre (SPN 917), Günlük Trip (SPN 244), Canlı GPS Koordinatları & Koridor Güzergahı.
+  4. **🛡️ Güvenlik, TPMS & Teşhis:** 4 Tekerlek Bağımsız TPMS Basıncı, Kabin Güvenliği, Sıfır Hata (MIL Clean) Teşhisi.
+- **➕ / 🗑️ Dinamik Filo Yönetimi:** Yeni marka/araç ekleme, tarayıcıdan fotoğraf yükleme ve filodan güvenli araç çıkarma/silme modülü.
+- **📥 Telematik Rapor İhracı:** Tek tıkla tüm filo telemetrisini `.csv` formatında dışa aktarma.
+- **📟 J1939 CAN Sniffer & Inspector:** 29-bit CAN ID ayrıştırma, PGN çözme ve 8-bayt canlı hex veri akışı.
+
+---
+
+## 🚗 2. 10 Popüler Otomobil Markası & 30+ Model Filosu
 
 | # | Marka | Model | Kategori | J1939 SA (Hex) | Motor / Güç | Maks Hız |
 |---|:---|:---|:---|:---:|:---|:---:|
@@ -54,36 +57,26 @@ Sistem birbirini gerçek zamanlı CAN bus ve WebSocket üzerinden senkronize ede
 
 ## 📊 3. SAE J1939 Protokol Özellikleri
 
-- **PGN 65265 (`0xFEF1` - CCVS):** Cruise Control / Vehicle Speed.
-- **SPN 84 (Wheel-Based Vehicle Speed):** `1/256 km/h / bit` (= `0.00390625 km/h`) çözünürlük.
+- **PGN 65265 (`0xFEF1` - CCVS):** Cruise Control / Vehicle Speed (`SPN 84`).
+- **PGN 61443 (`0xF003` - EEC2):** Accelerator Pedal Position 1 (`SPN 91`).
+- **PGN 61445 (`0xF005` - ETC2):** Transmission Current Gear (`SPN 523`).
+- **PGN 65110 (`0xFE56` - HVS):** High Voltage Battery State of Charge / Health.
 - **29-Bit CAN ID Hesaplama:** `(Priority << 26) | (PGN << 8) | SourceAddress`
-  - Örnek: `BMW 320i` (SA: `0x01`) için CAN ID = `0x18FEF101`
-  - Örnek: `Tesla Model 3` (SA: `0x10`) için CAN ID = `0x18FEF110`
 
 ---
 
 ## 🚀 4. Nasıl Çalıştırılır?
 
-### Adım 1: Sunucuyu Başlatın
 ```powershell
 python server.py
 ```
 
-### Adım 2: İki Ayrı Sekmede/Ekranda Açın
-- 🕹️ **Hız Verme Ortamı (Gönderici):** 👉 [**http://localhost:8000/control**](http://localhost:8000/control)
-- 📺 **İzleme Ortamı (Alıcı):** 👉 [**http://localhost:8000/**](http://localhost:8000/)
-
-*(Hız verme panelinden herhangi bir araca hız verdiğinizde, izleme ekranındaki kadranın ve CAN paketlerinin eş zamanlı olarak yükseldiğini göreceksiniz.)*
-
-### Alternatif: Terminalden Hız Sinyali Gönderme (CLI)
-Sunucu açıkken yeni bir terminal penceresinde:
-```powershell
-python j1939_sender.py
-```
+Web Tarayıcısında Açın: 👉 [**http://localhost:8000/**](http://localhost:8000/)
 
 ---
 
 ## 🧪 5. Testleri Çalıştırma
+
 ```powershell
 pytest tests/ -v
 ```
