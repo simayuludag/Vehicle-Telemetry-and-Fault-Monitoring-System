@@ -4,14 +4,133 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>J1939 CAN Bus Çoklu Sinyal & Telemetri Paneli</title>
-  <meta name="description" content="SAE J1939 Standardında 30 Araç İçin Hız, Gaz Pedalı, Fren, Vites, Batarya ve Görsel Araç Galerisi (CCVS, EEC2, ETC2, HVS).">
+  <meta name="description" content="SAE J1939 Standardında 30+ Araç İçin Canlı Hız, Devir, Gaz, Fren, Vites, Batarya/Yakıt, Motor Sağlığı ve GPS Telematik Filo İzleme Merkezi.">
   
-  <link rel="stylesheet" href="/static/css/style.css?v=5.0">
+  <!-- Modern Google Fonts: Chakra Petch, Outfit, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/css/style.css?v=6.5">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
   
-  <!-- GARANTİ VE ASLA BOZULMAYAN DÜZEN STİLLERİ -->
+  <!-- ULTRA-PREMIUM CYBER-AUTOMOTIVE DESIGN SYSTEM -->
   <style>
-    /* SOL PANEL: 30 ARAÇ KARTI IZGARASI (ASLA SIKIŞMAYAN DÜZEN) */
+    :root {
+      --bg-space: #05070d;
+      --bg-panel: rgba(13, 19, 33, 0.78);
+      --bg-panel-hover: rgba(20, 30, 52, 0.9);
+      --bg-card-inner: rgba(7, 11, 20, 0.65);
+      
+      --cyan-neon: #00f0ff;
+      --emerald-neon: #10b981;
+      --amber-neon: #f59e0b;
+      --rose-neon: #f43f5e;
+      --purple-neon: #8b5cf6;
+      --blue-neon: #3b82f6;
+
+      --font-brand: 'Outfit', sans-serif;
+      --font-tech: 'Chakra Petch', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      background-color: var(--bg-space) !important;
+      background-image: 
+        radial-gradient(circle at 12% 10%, rgba(0, 240, 255, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 88% 18%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 50% 85%, rgba(16, 185, 129, 0.06) 0%, transparent 55%),
+        linear-gradient(180deg, #05070d 0%, #070a14 50%, #05070d 100%) !important;
+      background-attachment: fixed !important;
+      color: #f1f5f9 !important;
+      font-family: var(--font-brand) !important;
+      min-height: 100vh !important;
+    }
+
+    /* TOPBAR GÜZELLEŞTİRME */
+    .topbar {
+      background: rgba(8, 12, 22, 0.88) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      border-bottom: 1px solid rgba(0, 240, 255, 0.15) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.7) !important;
+      padding: 12px 28px !important;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #00f0ff 0%, #3b82f6 50%, #8b5cf6 100%) !important;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+      border-radius: 12px !important;
+      font-family: var(--font-tech) !important;
+      font-weight: 800 !important;
+      color: #05070d !important;
+    }
+
+    .brand-title h1 {
+      font-family: var(--font-tech) !important;
+      font-size: 1.35rem !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.6px !important;
+      color: #fff !important;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .j1939-pill {
+      background: rgba(0, 240, 255, 0.12) !important;
+      border: 1px solid rgba(0, 240, 255, 0.45) !important;
+      color: var(--cyan-neon) !important;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.25) !important;
+      font-weight: 600 !important;
+    }
+
+    .telemetry-metrics-bar {
+      background: rgba(5, 8, 16, 0.75) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    /* SOL PANEL: 30 ARAÇ KARTI IZGARASI */
+    .panel-card {
+      background: var(--bg-panel) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 18px !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .panel-header {
+      background: rgba(0, 0, 0, 0.3) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .brand-filters-wrap {
+      background: rgba(5, 8, 15, 0.5) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .brand-chip {
+      background: rgba(255, 255, 255, 0.04) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      font-family: var(--font-tech) !important;
+      font-size: 0.82rem !important;
+      color: #94a3b8 !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .brand-chip:hover {
+      background: rgba(255, 255, 255, 0.09) !important;
+      color: #fff !important;
+      border-color: rgba(0, 240, 255, 0.4) !important;
+      transform: translateY(-1px) !important;
+    }
+
+    .brand-chip.active {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.22) 0%, rgba(59, 130, 246, 0.22) 100%) !important;
+      border-color: var(--cyan-neon) !important;
+      color: #fff !important;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.35) !important;
+      font-weight: 700 !important;
+    }
+
     .vehicles-grid {
       display: grid !important;
       grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)) !important;
@@ -23,31 +142,33 @@
     }
 
     .vehicle-card {
-      background: #0f172a !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-radius: 12px !important;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.85) 0%, rgba(9, 13, 24, 0.95) 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.09) !important;
+      border-radius: 14px !important;
       padding: 14px 16px !important;
       cursor: pointer !important;
       display: flex !important;
       flex-direction: column !important;
-      gap: 6px !important;
-      min-height: 135px !important;
+      gap: 7px !important;
+      min-height: 140px !important;
       height: auto !important;
-      transition: all 0.2s ease !important;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
       box-sizing: border-box !important;
       position: relative !important;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
     }
 
     .vehicle-card:hover {
-      background: #1e293b !important;
-      border-color: rgba(0, 210, 255, 0.5) !important;
-      transform: translateY(-2px) !important;
+      background: linear-gradient(145deg, rgba(24, 36, 64, 0.95) 0%, rgba(13, 19, 36, 0.98) 100%) !important;
+      border-color: rgba(0, 240, 255, 0.5) !important;
+      transform: translateY(-3px) !important;
+      box-shadow: 0 10px 30px rgba(0, 240, 255, 0.22), 0 0 1px 1px rgba(0, 240, 255, 0.4) !important;
     }
 
     .vehicle-card.selected {
-      border-color: #00d2ff !important;
-      box-shadow: 0 0 20px rgba(0, 210, 255, 0.35) !important;
-      background: rgba(0, 210, 255, 0.08) !important;
+      border-color: var(--cyan-neon) !important;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4), inset 0 0 15px rgba(0, 240, 255, 0.1) !important;
+      background: linear-gradient(145deg, rgba(0, 240, 255, 0.12) 0%, rgba(13, 20, 36, 0.95) 100%) !important;
     }
 
     .vehicle-card-top-row {
@@ -61,36 +182,41 @@
       display: flex !important;
       align-items: center !important;
       gap: 6px !important;
-      font-size: 0.74rem !important;
+      font-family: var(--font-tech) !important;
+      font-size: 0.78rem !important;
       font-weight: 700 !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.5px !important;
+      letter-spacing: 0.6px !important;
       color: #f0f4fc !important;
-      background: rgba(0, 0, 0, 0.4) !important;
-      padding: 3px 8px !important;
-      border-radius: 4px !important;
+      background: rgba(0, 0, 0, 0.5) !important;
+      padding: 3px 9px !important;
+      border-radius: 6px !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     .sa-pill {
-      font-family: 'JetBrains Mono', monospace !important;
+      font-family: var(--font-mono) !important;
       font-size: 0.72rem !important;
-      color: #00d2ff !important;
-      background: rgba(0, 210, 255, 0.1) !important;
-      border: 1px solid rgba(0, 210, 255, 0.25) !important;
-      padding: 2px 6px !important;
-      border-radius: 4px !important;
+      font-weight: 600 !important;
+      color: var(--cyan-neon) !important;
+      background: rgba(0, 240, 255, 0.1) !important;
+      border: 1px solid rgba(0, 240, 255, 0.3) !important;
+      padding: 2px 7px !important;
+      border-radius: 5px !important;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.15) !important;
     }
 
     .vehicle-model-title {
-      font-size: 1rem !important;
+      font-family: var(--font-brand) !important;
+      font-size: 1.05rem !important;
       font-weight: 700 !important;
-      color: #fff !important;
+      color: #ffffff !important;
       line-height: 1.2 !important;
-      margin-top: 2px !important;
+      letter-spacing: 0.2px !important;
     }
 
     .vehicle-specs-line {
-      font-family: 'JetBrains Mono', monospace !important;
+      font-family: var(--font-mono) !important;
       font-size: 0.74rem !important;
       color: #94a3b8 !important;
     }
@@ -103,65 +229,87 @@
     }
 
     .speed-readout {
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-size: 1.6rem !important;
-      font-weight: 700 !important;
-      color: #fff !important;
+      font-family: var(--font-tech) !important;
+      font-size: 1.7rem !important;
+      font-weight: 800 !important;
+      color: #ffffff !important;
       line-height: 1 !important;
+      text-shadow: 0 0 15px rgba(255, 255, 255, 0.3) !important;
     }
 
     .speed-readout .unit {
-      font-size: 0.72rem !important;
-      color: #00d2ff !important;
-      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 0.75rem !important;
+      color: var(--cyan-neon) !important;
+      font-family: var(--font-mono) !important;
+      font-weight: 700 !important;
     }
 
     .card-telemetry-pills {
       display: flex !important;
       gap: 6px !important;
       margin-top: 4px !important;
-      font-family: 'JetBrains Mono', monospace !important;
+      font-family: var(--font-mono) !important;
       font-size: 0.72rem !important;
     }
 
     .card-telemetry-pills span {
-      background: rgba(0, 0, 0, 0.45) !important;
+      background: rgba(0, 0, 0, 0.5) !important;
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      padding: 2px 6px !important;
-      border-radius: 4px !important;
+      padding: 3px 7px !important;
+      border-radius: 5px !important;
     }
 
     .pill-gear { color: #f59e0b !important; font-weight: 700 !important; }
-    .pill-soc { color: #10b981 !important; }
-    .pill-throttle { color: #00d2ff !important; }
+    .pill-soc { color: #10b981 !important; font-weight: 600 !important; }
+    .pill-throttle { color: #00f0ff !important; font-weight: 600 !important; }
 
     .speed-bar-track {
-      height: 5px !important;
+      height: 6px !important;
       background: rgba(255, 255, 255, 0.08) !important;
-      border-radius: 4px !important;
+      border-radius: 6px !important;
       overflow: hidden !important;
-      margin-top: 4px !important;
+      margin-top: 5px !important;
       width: 100% !important;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5) !important;
     }
 
     .speed-bar-fill {
       height: 100% !important;
-      background: linear-gradient(90deg, #00d2ff, #10b981) !important;
-      border-radius: 4px !important;
-      transition: width 0.15s ease-out !important;
+      background: linear-gradient(90deg, #00f0ff 0%, #10b981 60%, #f59e0b 85%, #f43f5e 100%) !important;
+      border-radius: 6px !important;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.5) !important;
+      transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* SAĞ PANEL: BÜYÜK VE ŞIK ARAÇ VİTRİNİ */
+    /* SAĞ PANEL: BÜYÜK ARAÇ VİTRİNİ & COCKPIT */
+    .cockpit-card {
+      background: var(--bg-panel) !important;
+      backdrop-filter: blur(20px) saturate(180%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 18px !important;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      padding: 18px !important;
+    }
+
     .active-vehicle-showcase-card {
       width: 100% !important;
-      height: 220px !important;
-      border-radius: 12px !important;
+      height: 235px !important;
+      border-radius: 16px !important;
       overflow: hidden !important;
       position: relative !important;
-      border: 1px solid rgba(255, 255, 255, 0.15) !important;
-      margin-bottom: 12px !important;
-      background: #0a0f1d !important;
-      box-shadow: 0 0 25px rgba(0, 0, 0, 0.5) !important;
+      border: 1px solid rgba(0, 240, 255, 0.25) !important;
+      margin-bottom: 14px !important;
+      background: radial-gradient(circle at 50% 50%, #0e1526 0%, #060913 100%) !important;
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.8), inset 0 0 30px rgba(0, 0, 0, 0.6) !important;
+    }
+
+    .active-vehicle-showcase-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(to bottom, rgba(5,7,13,0.5) 0%, transparent 28%, transparent 68%, rgba(5,7,13,0.85) 100%);
+      border-radius: 16px;
     }
 
     .active-vehicle-showcase-img {
@@ -169,17 +317,22 @@
       height: 100% !important;
       object-fit: cover !important;
       display: block !important;
-      transition: opacity 0.25s ease !important;
+      transition: all 0.35s ease !important;
+      filter: contrast(1.05) brightness(1.02);
     }
 
-    /* KOKPİT DÜZENİ */
+    /* KOKPİT HUD DÜZENİ */
     .cockpit-hud-center {
       width: 100% !important;
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
       gap: 16px !important;
-      margin: 6px 0 !important;
+      margin: 8px 0 !important;
+      background: rgba(0, 0, 0, 0.3) !important;
+      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+      border-radius: 16px !important;
+      padding: 10px 16px !important;
     }
 
     .pedal-hud-vertical {
@@ -187,19 +340,20 @@
       flex-direction: column !important;
       align-items: center !important;
       gap: 6px !important;
-      width: 70px !important;
+      width: 75px !important;
     }
 
     .pedal-bar-vertical-track {
-      width: 18px !important;
-      height: 130px !important;
-      background: rgba(0, 0, 0, 0.5) !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      width: 20px !important;
+      height: 135px !important;
+      background: rgba(0, 0, 0, 0.65) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
       border-radius: 9999px !important;
       position: relative !important;
       overflow: hidden !important;
       display: flex !important;
       flex-direction: column-reverse !important;
+      box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8) !important;
     }
 
     .telemetry-strip-grid {
@@ -211,98 +365,64 @@
     }
 
     .telemetry-mini-box {
-      background: rgba(0, 0, 0, 0.4) !important;
-      border: 1px solid rgba(255, 255, 255, 0.1) !important;
-      border-radius: 12px !important;
-      padding: 12px 14px !important;
+      background: rgba(7, 11, 22, 0.7) !important;
+      border: 1px solid rgba(255, 255, 255, 0.09) !important;
+      border-radius: 14px !important;
+      padding: 12px 16px !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 8px !important;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
     }
 
     .real-gearbox-container {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
-      background: rgba(0, 0, 0, 0.5) !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 8px !important;
-      padding: 6px 12px !important;
+      background: rgba(0, 0, 0, 0.6) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 10px !important;
+      padding: 7px 14px !important;
     }
 
     .prnd-selector-group {
       display: flex !important;
       align-items: center !important;
-      gap: 12px !important;
+      gap: 14px !important;
     }
 
     .prnd-pill {
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-size: 1.05rem !important;
+      font-family: var(--font-tech) !important;
+      font-size: 1.15rem !important;
       font-weight: 700 !important;
-      color: #64748b !important;
-      transition: all 0.2s ease !important;
+      color: #475569 !important;
+      transition: all 0.25s ease !important;
     }
 
     .prnd-pill.active {
       color: #f59e0b !important;
-      text-shadow: 0 0 10px rgba(245, 158, 11, 0.6) !important;
-      transform: scale(1.15) !important;
+      text-shadow: 0 0 16px rgba(245, 158, 11, 0.8), 0 0 30px rgba(245, 158, 11, 0.4) !important;
+      transform: scale(1.22) !important;
     }
 
     .active-gear-big-badge {
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-size: 1.25rem !important;
-      font-weight: 700 !important;
-      color: #07090e !important;
+      font-family: var(--font-tech) !important;
+      font-size: 1.35rem !important;
+      font-weight: 800 !important;
+      color: #05070d !important;
       background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%) !important;
-      padding: 3px 12px !important;
-      border-radius: 6px !important;
-      box-shadow: 0 0 12px rgba(245, 158, 11, 0.4) !important;
-      min-width: 44px !important;
+      padding: 4px 14px !important;
+      border-radius: 8px !important;
+      box-shadow: 0 0 18px rgba(245, 158, 11, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.5) !important;
+      min-width: 48px !important;
       text-align: center !important;
     }
 
-    .control-scope-tabs {
-      display: flex !important;
-      gap: 8px !important;
-      margin-bottom: 12px !important;
-      background: rgba(0,0,0,0.3) !important;
-      padding: 4px !important;
-      border-radius: 10px !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-
-    .scope-tab-btn {
-      flex: 1 !important;
-      background: transparent !important;
-      border: none !important;
-      color: #94a3b8 !important;
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-weight: 600 !important;
-      font-size: 0.82rem !important;
-      padding: 8px 12px !important;
-      border-radius: 6px !important;
-      cursor: pointer !important;
-      transition: all 0.2s ease !important;
-    }
-
-    .scope-tab-btn.active {
-      background: rgba(0, 210, 255, 0.18) !important;
-      color: #00d2ff !important;
-      box-shadow: 0 0 12px rgba(0, 210, 255, 0.25) !important;
-    }
-
-    .scope-tab-btn.fleet-mode.active {
-      background: rgba(245, 158, 11, 0.2) !important;
-      color: #f59e0b !important;
-      box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
-    }
     .btn-remove-vehicle {
-      background: rgba(244, 63, 94, 0.15) !important;
-      border: 1px solid rgba(244, 63, 94, 0.4) !important;
-      color: #f43f5e !important;
-      font-family: 'Chakra Petch', sans-serif !important;
+      background: rgba(244, 63, 94, 0.16) !important;
+      border: 1px solid rgba(244, 63, 94, 0.45) !important;
+      color: #fca5a5 !important;
+      font-family: var(--font-tech) !important;
       font-size: 0.82rem !important;
       font-weight: 700 !important;
       padding: 8px 16px !important;
@@ -311,40 +431,45 @@
       display: flex !important;
       align-items: center !important;
       gap: 6px !important;
-      box-shadow: 0 0 15px rgba(244, 63, 94, 0.2) !important;
-      transition: all 0.2s ease !important;
+      box-shadow: 0 0 15px rgba(244, 63, 94, 0.25) !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
+
     .btn-remove-vehicle:hover {
-      background: rgba(244, 63, 94, 0.3) !important;
+      background: rgba(244, 63, 94, 0.35) !important;
       border-color: #f43f5e !important;
       color: #fff !important;
-      box-shadow: 0 0 20px rgba(244, 63, 94, 0.4) !important;
+      box-shadow: 0 0 25px rgba(244, 63, 94, 0.55) !important;
+      transform: translateY(-1px) !important;
     }
+
     .btn-card-delete {
       background: rgba(244, 63, 94, 0.12) !important;
       border: 1px solid rgba(244, 63, 94, 0.3) !important;
       color: #fca5a5 !important;
-      border-radius: 4px !important;
+      border-radius: 5px !important;
       padding: 2px 6px !important;
-      font-size: 0.72rem !important;
+      font-size: 0.74rem !important;
       cursor: pointer !important;
       transition: all 0.15s ease !important;
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
     }
+
     .btn-card-delete:hover {
-      background: rgba(244, 63, 94, 0.4) !important;
+      background: rgba(244, 63, 94, 0.45) !important;
       color: #fff !important;
       border-color: #f43f5e !important;
-      box-shadow: 0 0 8px rgba(244, 63, 94, 0.5) !important;
-      transform: scale(1.1) !important;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.6) !important;
+      transform: scale(1.15) !important;
     }
+
     .btn-delete-vehicle {
       background: rgba(239, 68, 68, 0.22) !important;
       border: 1px solid rgba(239, 68, 68, 0.55) !important;
       color: #fca5a5 !important;
-      font-family: 'Chakra Petch', sans-serif !important;
+      font-family: var(--font-tech) !important;
       font-size: 0.78rem !important;
       font-weight: 700 !important;
       padding: 6px 12px !important;
@@ -357,11 +482,12 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
       transition: all 0.2s ease !important;
     }
+
     .btn-delete-vehicle:hover {
       background: rgba(239, 68, 68, 0.45) !important;
       color: #fff !important;
       border-color: #ef4444 !important;
-      box-shadow: 0 0 16px rgba(239, 68, 68, 0.4) !important;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.5) !important;
       transform: translateY(-1px) !important;
     }
 
@@ -370,47 +496,52 @@
       display: flex !important;
       flex-direction: column !important;
       gap: 12px !important;
-      margin-top: 8px !important;
+      margin-top: 10px !important;
     }
 
     .telematics-domain-section {
-      background: rgba(0, 0, 0, 0.45) !important;
+      background: linear-gradient(145deg, rgba(10, 15, 29, 0.75) 0%, rgba(6, 10, 20, 0.9) 100%) !important;
       border: 1px solid rgba(255, 255, 255, 0.08) !important;
-      border-radius: 12px !important;
-      padding: 12px 16px !important;
+      border-radius: 14px !important;
+      padding: 14px 18px !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 10px !important;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+      transition: border-color 0.2s ease !important;
+    }
+
+    .telematics-domain-section:hover {
+      border-color: rgba(0, 240, 255, 0.25) !important;
     }
 
     .domain-header {
       display: flex !important;
       justify-content: space-between !important;
       align-items: center !important;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-      padding-bottom: 6px !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+      padding-bottom: 7px !important;
     }
 
     .domain-title {
-      font-family: 'Chakra Petch', sans-serif !important;
-      font-size: 0.82rem !important;
+      font-family: var(--font-tech) !important;
+      font-size: 0.88rem !important;
       font-weight: 700 !important;
-      color: #00d2ff !important;
+      color: var(--cyan-neon) !important;
       letter-spacing: 0.5px !important;
       display: flex !important;
       align-items: center !important;
-      gap: 6px !important;
+      gap: 7px !important;
     }
 
     .domain-tag {
-      font-family: 'JetBrains Mono', monospace !important;
-      font-size: 0.68rem !important;
+      font-family: var(--font-mono) !important;
+      font-size: 0.70rem !important;
       color: #94a3b8 !important;
-      background: rgba(255, 255, 255, 0.04) !important;
-      padding: 2px 8px !important;
-      border-radius: 4px !important;
-      border: 1px solid rgba(255, 255, 255, 0.06) !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      padding: 3px 9px !important;
+      border-radius: 5px !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     .telematics-kpi-grid {
@@ -426,68 +557,96 @@
     }
 
     .kpi-cell {
-      background: rgba(255, 255, 255, 0.025) !important;
-      border: 1px solid rgba(255, 255, 255, 0.06) !important;
-      border-radius: 8px !important;
-      padding: 9px 12px !important;
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(255, 255, 255, 0.07) !important;
+      border-radius: 10px !important;
+      padding: 10px 14px !important;
       display: flex !important;
       flex-direction: column !important;
       gap: 3px !important;
-      transition: all 0.2s ease !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
     }
 
     .kpi-cell:hover {
-      background: rgba(255, 255, 255, 0.05) !important;
-      border-color: rgba(0, 210, 255, 0.3) !important;
+      background: rgba(255, 255, 255, 0.065) !important;
+      border-color: rgba(0, 240, 255, 0.4) !important;
+      transform: translateY(-1px) !important;
+      box-shadow: 0 4px 14px rgba(0, 240, 255, 0.15) !important;
     }
 
     .kpi-label {
-      font-size: 0.66rem !important;
+      font-size: 0.68rem !important;
       font-weight: 700 !important;
       color: #94a3b8 !important;
       text-transform: uppercase !important;
-      letter-spacing: 0.4px !important;
+      letter-spacing: 0.5px !important;
+      font-family: var(--font-brand) !important;
     }
 
     .kpi-val {
-      font-family: 'JetBrains Mono', monospace !important;
-      font-size: 1.15rem !important;
+      font-family: var(--font-mono) !important;
+      font-size: 1.22rem !important;
       font-weight: 700 !important;
-      color: #fff !important;
+      color: #ffffff !important;
       line-height: 1.2 !important;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
     }
 
     .kpi-sub {
-      font-family: 'JetBrains Mono', monospace !important;
-      font-size: 0.68rem !important;
+      font-family: var(--font-mono) !important;
+      font-size: 0.70rem !important;
       color: #64748b !important;
-      margin-top: 1px !important;
+      margin-top: 2px !important;
     }
 
     .telematics-safety-bar {
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
-      background: rgba(16, 185, 129, 0.06) !important;
-      border: 1px solid rgba(16, 185, 129, 0.25) !important;
-      border-radius: 10px !important;
-      padding: 10px 16px !important;
-      font-size: 0.76rem !important;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 78, 59, 0.15) 100%) !important;
+      border: 1px solid rgba(16, 185, 129, 0.35) !important;
+      border-radius: 12px !important;
+      padding: 12px 18px !important;
+      font-size: 0.78rem !important;
       color: #cbd5e1 !important;
-      font-family: 'JetBrains Mono', monospace !important;
+      font-family: var(--font-mono) !important;
       flex-wrap: wrap !important;
-      gap: 8px !important;
+      gap: 10px !important;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.12) !important;
     }
 
     .safety-item {
       display: flex !important;
       align-items: center !important;
-      gap: 6px !important;
+      gap: 7px !important;
     }
 
     .dot-ok {
       color: #10b981 !important;
-      font-size: 0.85rem !important;
+      font-size: 0.9rem !important;
+      text-shadow: 0 0 8px #10b981 !important;
+    }
+
+    /* SNIFFER & INSPECTOR GÜZELLEŞTİRME */
+    .sniffer-table th {
+      background: rgba(0, 0, 0, 0.6) !important;
+      color: var(--cyan-neon) !important;
+      font-family: var(--font-tech) !important;
+      letter-spacing: 0.5px !important;
+      font-size: 0.76rem !important;
+    }
+
+    .hex-byte-block {
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      background: rgba(0, 0, 0, 0.5) !important;
+      border-radius: 5px !important;
+    }
+
+    .hex-byte-block.highlight {
+      background: rgba(0, 240, 255, 0.18) !important;
+      border-color: var(--cyan-neon) !important;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3) !important;
     }
   </style>
 </head>
@@ -571,13 +730,19 @@
         
         <!-- Dedicated Car Visual Card (Her araca özel yerel görsel ve canlı başlık) -->
         <div class="active-vehicle-showcase-card">
+          <!-- Cyber Reticle HUD Corner Markers -->
+          <div style="position: absolute; top: 8px; left: 8px; width: 14px; height: 14px; border-top: 2px solid var(--cyan-neon); border-left: 2px solid var(--cyan-neon); z-index: 15; pointer-events: none;"></div>
+          <div style="position: absolute; top: 8px; right: 8px; width: 14px; height: 14px; border-top: 2px solid var(--cyan-neon); border-right: 2px solid var(--cyan-neon); z-index: 15; pointer-events: none;"></div>
+          <div style="position: absolute; bottom: 8px; left: 8px; width: 14px; height: 14px; border-bottom: 2px solid var(--cyan-neon); border-left: 2px solid var(--cyan-neon); z-index: 15; pointer-events: none;"></div>
+          <div style="position: absolute; bottom: 8px; right: 8px; width: 14px; height: 14px; border-bottom: 2px solid var(--cyan-neon); border-right: 2px solid var(--cyan-neon); z-index: 15; pointer-events: none;"></div>
+
           <!-- Top Overlay: Araç Adı, Plaka ve Aktarma Organı Türü -->
           <div style="position: absolute; top: 12px; left: 14px; right: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center; pointer-events: none;">
-            <div style="background: rgba(7, 9, 14, 0.88); backdrop-filter: blur(12px); padding: 6px 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 18px rgba(0,0,0,0.6);">
-              <div id="showcaseVehicleTitle" style="font-family: 'Chakra Petch', sans-serif; font-size: 1.05rem; font-weight: 700; color: #fff; letter-spacing: 0.5px;">BMW 320i Sedan M Sport</div>
-              <div id="showcaseVehicleSub" style="font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">34 BMW 320 · 2.0L TwinPower Turbo</div>
+            <div style="background: rgba(5, 8, 16, 0.9); backdrop-filter: blur(16px); padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(0, 240, 255, 0.3); box-shadow: 0 8px 24px rgba(0,0,0,0.8);">
+              <div id="showcaseVehicleTitle" style="font-family: 'Chakra Petch', sans-serif; font-size: 1.12rem; font-weight: 700; color: #fff; letter-spacing: 0.5px; text-shadow: 0 0 12px rgba(255,255,255,0.25);">BMW 320i Sedan M Sport</div>
+              <div id="showcaseVehicleSub" style="font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; color: #94a3b8; margin-top: 2px;">34 BMW 320 · 2.0L TwinPower Turbo</div>
             </div>
-            <div id="showcasePowertrainBadge" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Chakra Petch', sans-serif; font-size: 0.76rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; box-shadow: 0 0 14px rgba(245, 158, 11, 0.35); text-transform: uppercase;">
+            <div id="showcasePowertrainBadge" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; font-family: 'Chakra Petch', sans-serif; font-size: 0.8rem; font-weight: 700; padding: 7px 14px; border-radius: 10px; box-shadow: 0 0 16px rgba(245, 158, 11, 0.4); text-transform: uppercase; letter-spacing: 0.5px;">
               ⛽ BENZİNLİ (ICE)
             </div>
           </div>
@@ -585,15 +750,15 @@
           <img id="activeVehiclePhoto" src="/static/images/cars/bmw-320i.jpg" alt="Araç Görseli" class="active-vehicle-showcase-img">
           
           <!-- Bottom Overlay: J1939 SA & Aksiyon Butonları (Fotoğraf Değiştir + Aracı Kaldır) -->
-          <div style="position: absolute; bottom: 10px; right: 12px; left: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center;">
-            <span id="showcaseSaBadge" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.4); color: #00d2ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+          <div style="position: absolute; bottom: 12px; right: 14px; left: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center;">
+            <span id="showcaseSaBadge" style="background: rgba(5, 8, 16, 0.9); border: 1px solid rgba(0, 240, 255, 0.45); color: #00f0ff; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 8px; backdrop-filter: blur(12px); box-shadow: 0 4px 16px rgba(0,0,0,0.65);">
               J1939 SA: 0x01
             </span>
             <div style="display: flex; gap: 8px; align-items: center;">
               <button id="btnDeleteVehicle" class="btn-delete-vehicle" title="Seçili Aracı Filodan Sil / Kaldır">
                 🗑️ Aracı Kaldır
               </button>
-              <label for="carPhotoFileInput" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.5); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: all 0.2s ease;">
+              <label for="carPhotoFileInput" style="background: rgba(5, 8, 16, 0.9); border: 1px solid rgba(0, 240, 255, 0.55); color: #00f0ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.80rem; font-weight: 700; padding: 7px 16px; border-radius: 8px; cursor: pointer; backdrop-filter: blur(12px); display: flex; align-items: center; gap: 7px; box-shadow: 0 4px 18px rgba(0,0,0,0.65); transition: all 0.2s ease;">
                 📷 Fotoğraf Değiştir (.jpg / .png)
               </label>
             </div>
@@ -606,20 +771,20 @@
           
           <!-- Left: Throttle Pedal HUD (SPN 91) -->
           <div class="pedal-hud-vertical">
-            <span class="pedal-label" style="color:#10b981; font-weight:700; font-size:0.75rem">⚡ GAZ</span>
+            <span class="pedal-label" style="color:#10b981; font-weight:700; font-size:0.78rem; font-family:var(--font-tech)">⚡ GAZ</span>
             <div class="pedal-bar-vertical-track" title="SPN 91 Gaz Pedalı Açıklığı (%)">
-              <div class="pedal-bar-vertical-fill throttle" id="throttleBarFill" style="height: 20%; background: linear-gradient(180deg, #10b981 0%, #00d2ff 100%);"></div>
+              <div class="pedal-bar-vertical-fill throttle" id="throttleBarFill" style="height: 20%; background: linear-gradient(180deg, #10b981 0%, #00f0ff 100%); box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);"></div>
             </div>
-            <span class="pedal-val-readout" id="throttleReadout" style="color:#10b981; font-family:'JetBrains Mono', monospace; font-size:0.82rem; font-weight:700">%20</span>
+            <span class="pedal-val-readout" id="throttleReadout" style="color:#10b981; font-family:'JetBrains Mono', monospace; font-size:0.85rem; font-weight:700">%20</span>
           </div>
 
           <!-- Center: Speedometer Gauge (SPN 84) + Sürüş Parametreleri -->
           <div class="gauge-container" style="flex:1; display:flex; flex-direction:column; align-items:center;">
-            <canvas id="speedGaugeCanvas" width="280" height="175"></canvas>
-            <div style="display:flex; gap:16px; align-items:center; margin-top:-8px; font-family:'JetBrains Mono', monospace; font-size:0.78rem;">
+            <canvas id="speedGaugeCanvas" width="300" height="185"></canvas>
+            <div style="display:flex; gap:16px; align-items:center; margin-top:-6px; font-family:'JetBrains Mono', monospace; font-size:0.80rem; background:rgba(0,0,0,0.45); padding:4px 14px; border-radius:20px; border:1px solid rgba(255,255,255,0.08);">
               <span style="color:#94a3b8">Devir: <strong id="telemetryRpmVal" style="color:#f59e0b">2,150 RPM</strong></span>
               <span style="color:#64748b">|</span>
-              <span style="color:#94a3b8">Motor Yükü: <strong id="telemetryLoadVal" style="color:#00d2ff">%34.5</strong></span>
+              <span style="color:#94a3b8">Motor Yükü: <strong id="telemetryLoadVal" style="color:#00f0ff">%34.5</strong></span>
               <span style="color:#64748b">|</span>
               <span style="color:#94a3b8">Cruise: <strong id="telemetryCruiseVal" style="color:#10b981">AKTİF</strong></span>
             </div>
@@ -627,11 +792,11 @@
 
           <!-- Right: Brake Pedal HUD (SPN 563 / 521) -->
           <div class="pedal-hud-vertical">
-            <span class="pedal-label" style="color:#f43f5e; font-weight:700; font-size:0.75rem">🛑 FREN</span>
+            <span class="pedal-label" style="color:#f43f5e; font-weight:700; font-size:0.78rem; font-family:var(--font-tech)">🛑 FREN</span>
             <div class="pedal-bar-vertical-track" title="SPN 563 Fren Durumu / Basıncı (%)">
-              <div class="pedal-bar-vertical-fill brake" id="brakeBarFill" style="height: 0%; background: linear-gradient(180deg, #f43f5e 0%, #be123c 100%);"></div>
+              <div class="pedal-bar-vertical-fill brake" id="brakeBarFill" style="height: 0%; background: linear-gradient(180deg, #f43f5e 0%, #be123c 100%); box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);"></div>
             </div>
-            <span class="pedal-val-readout" id="brakeReadout" style="color:#f43f5e; font-family:'JetBrains Mono', monospace; font-size:0.82rem; font-weight:700">%0</span>
+            <span class="pedal-val-readout" id="brakeReadout" style="color:#f43f5e; font-family:'JetBrains Mono', monospace; font-size:0.85rem; font-weight:700">%0</span>
           </div>
 
         </div>
