@@ -1100,5 +1100,8 @@ def delete_vehicle(vehicle_id: str) -> bool:
     return False
 
 
-# Başlangıçta kaydedilmiş özel araçları yükle
+# Başlangıçta kaydedilmiş özel araçları yükle ve tüm aktarma organlarını normalize et
 _load_custom_fleet()
+for _v in VEHICLES:
+    _normalize_vehicle_powertrain(_v)
+
