@@ -298,6 +298,30 @@
       color: #f59e0b !important;
       box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
     }
+    .btn-delete-vehicle {
+      background: rgba(239, 68, 68, 0.22) !important;
+      border: 1px solid rgba(239, 68, 68, 0.55) !important;
+      color: #fca5a5 !important;
+      font-family: 'Chakra Petch', sans-serif !important;
+      font-size: 0.78rem !important;
+      font-weight: 700 !important;
+      padding: 6px 12px !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      backdrop-filter: blur(8px) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.6) !important;
+      transition: all 0.2s ease !important;
+    }
+    .btn-delete-vehicle:hover {
+      background: rgba(239, 68, 68, 0.45) !important;
+      color: #fff !important;
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 16px rgba(239, 68, 68, 0.4) !important;
+      transform: translateY(-1px) !important;
+    }
   </style>
 </head>
 <body>
@@ -390,14 +414,19 @@
 
           <img id="activeVehiclePhoto" src="/static/images/cars/bmw-320i.jpg" alt="Araç Görseli" class="active-vehicle-showcase-img">
           
-          <!-- Bottom Overlay: J1939 SA & Fotoğraf Yükleme Butonu -->
+          <!-- Bottom Overlay: J1939 SA & Aksiyon Butonları (Fotoğraf Değiştir + Aracı Kaldır) -->
           <div style="position: absolute; bottom: 10px; right: 12px; left: 14px; z-index: 10; display: flex; justify-content: space-between; align-items: center;">
             <span id="showcaseSaBadge" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.4); color: #00d2ff; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; padding: 5px 12px; border-radius: 6px; backdrop-filter: blur(8px); box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
               J1939 SA: 0x01
             </span>
-            <label for="carPhotoFileInput" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.5); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: all 0.2s ease;">
-              📷 Fotoğraf Değiştir / Yükle (.jpg / .png)
-            </label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button id="btnDeleteVehicle" class="btn-delete-vehicle" title="Seçili Aracı Filodan Sil / Kaldır">
+                🗑️ Aracı Kaldır
+              </button>
+              <label for="carPhotoFileInput" style="background: rgba(7, 9, 14, 0.88); border: 1px solid rgba(0, 210, 255, 0.5); color: #00d2ff; font-family: 'Chakra Petch', sans-serif; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); transition: all 0.2s ease;">
+                📷 Fotoğraf Değiştir (.jpg / .png)
+              </label>
+            </div>
             <input type="file" id="carPhotoFileInput" accept="image/jpeg, image/png, image/webp" style="display: none;">
           </div>
         </div>

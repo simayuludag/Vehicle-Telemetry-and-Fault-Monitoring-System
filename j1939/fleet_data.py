@@ -842,18 +842,28 @@ CUSTOM_DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", 
 CUSTOM_DATA_FILE = os.path.join(CUSTOM_DATA_DIR, "custom_fleet.json")
 
 
+DELETED_VEHICLE_IDS = set()
+
+
 def _ensure_custom_data_dir():
     os.makedirs(CUSTOM_DATA_DIR, exist_ok=True)
 
 
 def _load_custom_fleet():
     """Disk'teki özel araçları, markaları ve görsel değişikliklerini yükler"""
+    global DELETED_VEHICLE_IDS, VEHICLES
     if not os.path.exists(CUSTOM_DATA_FILE):
         return
 
     try:
         with open(CUSTOM_DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        DELETED_VEHICLE_IDS = set(data.get("deleted_vehicle_ids", []))
+
+        # Silinmiş araçları ana filodan çıkar
+        if DELETED_VEHICLE_IDS:
+            VEHICLES = [v for v in VEHICLES if v["id"] not in DELETED_VEHICLE_IDS]
 
         custom_brands = data.get("brands", [])
         for cb in custom_brands:
@@ -862,7 +872,7 @@ def _load_custom_fleet():
 
         custom_vehicles = data.get("vehicles", [])
         for cv in custom_vehicles:
-            if not any(v["id"] == cv["id"] for v in VEHICLES):
+            if cv["id"] not in DELETED_VEHICLE_IDS and not any(v["id"] == cv["id"] for v in VEHICLES):
                 VEHICLES.append(cv)
 
         # Görsel güncellemelerini uygula
@@ -907,6 +917,7 @@ def _save_custom_fleet():
             json.dump({
                 "brands": custom_brands,
                 "vehicles": custom_vehicles,
+                "deleted_vehicle_ids": list(DELETED_VEHICLE_IDS),
                 "image_overrides": image_overrides
             }, f, indent=2, ensure_ascii=False)
     except Exception as e:
@@ -1084,17 +1095,21 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
         "brake_pressed": False,
     }
 
+    if v_id in DELETED_VEHICLE_IDS:
+        DELETED_VEHICLE_IDS.discard(v_id)
+
     VEHICLES.append(new_vehicle)
     _save_custom_fleet()
     return new_vehicle
 
 
 def delete_vehicle(vehicle_id: str) -> bool:
-    """Filodan bir aracı siler"""
-    global VEHICLES
+    """Filodan bir aracı siler ve kalıcı olarak kaydeder"""
+    global VEHICLES, DELETED_VEHICLE_IDS
     initial_len = len(VEHICLES)
     VEHICLES = [v for v in VEHICLES if v["id"] != vehicle_id]
     if len(VEHICLES) < initial_len:
+        DELETED_VEHICLE_IDS.add(vehicle_id)
         _save_custom_fleet()
         return True
     return False

@@ -703,6 +703,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // 7.2. Seçili Aracı Filodan Silme / Kaldırma
+  const btnDeleteVehicle = document.getElementById('btnDeleteVehicle');
+  if (btnDeleteVehicle) {
+    btnDeleteVehicle.addEventListener('click', async () => {
+      const v = fleet.find(item => item.id === selectedVehicleId);
+      if (!v) {
+        alert('Kaldırılacak araç seçilmedi.');
+        return;
+      }
+
+      const confirmMsg = `"${v.brand_name} ${v.model} (${v.plate})"\n\nBu aracı filodan kaldırmak istediğinize emin misiniz?`;
+      if (!confirm(confirmMsg)) {
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/vehicle/${v.id}`, {
+          method: 'DELETE'
+        });
+        const data = await res.json();
+        if (res.ok && data.status === 'ok') {
+          // Yerel filodan çıkar
+          fleet = fleet.filter(item => item.id !== v.id);
+          if (fleet.length > 0) {
+            selectedVehicleId = fleet[0].id;
+          } else {
+            selectedVehicleId = null;
+          }
+          renderBrandFilters();
+          renderFleetGrid();
+          updateSelectedVehicleView();
+          alert(`✅ "${v.brand_name} ${v.model}" başarıyla filodan kaldırıldı.`);
+        } else {
+          alert(`❌ Araç kaldırılamadı: ${data.detail || data.message || 'Bilinmeyen hata'}`);
+        }
+      } catch (err) {
+        console.error('Araç silme hatası:', err);
+        alert(`❌ Araç kaldırılırken hata oluştu: ${err.message}`);
+      }
+    });
+  }
+
   // 8. CAN Sniffer
   function processSnifferFrame(frame) {
     canLogList.unshift(frame);
