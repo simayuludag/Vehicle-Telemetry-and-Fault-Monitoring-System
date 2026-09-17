@@ -1105,7 +1105,7 @@ def add_vehicle(vehicle_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def delete_vehicle(vehicle_id: str) -> bool:
     """Filodan bir aracı siler ve kalıcı olarak kaydeder"""
-    global VEHICLES, DELETED_VEHICLE_IDS
+    global VEHICLES
     initial_len = len(VEHICLES)
     VEHICLES = [v for v in VEHICLES if v["id"] != vehicle_id]
     if len(VEHICLES) < initial_len:

@@ -21,7 +21,8 @@ from can_bridge import CANBridge
 from j1939.fleet_data import (
     FLEET_BRANDS, VEHICLES, get_all_vehicles, get_vehicle_by_id,
     add_vehicle as add_fleet_vehicle, add_brand as add_fleet_brand,
-    delete_vehicle as delete_fleet_vehicle, get_next_available_source_address
+    delete_vehicle as delete_fleet_vehicle, get_next_available_source_address,
+    update_vehicle_image_url
 )
 from j1939.simulator import FleetSimulator
 
